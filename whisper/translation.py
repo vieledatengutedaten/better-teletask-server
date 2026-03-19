@@ -12,24 +12,21 @@ logger = logging.getLogger("btt_root_logger")
 load_dotenv()
 
 ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
-model_name = os.getenv("OLLAMA_MODEL", "gpt-oss:120b-cloud")
+model_name = os.getenv("OLLAMA_MODEL", "mistral:7b")
 
 # if script ran is located in other folder
 script_dir = os.path.dirname(os.path.abspath(__file__))
 output_folder = os.path.join(script_dir, os.getenv("VTT_DEST_FOLDER", "output/"))
-
 
 LANGUAGES: Dict[str, str] = {
     "de": "German",
     "en": "English",
 }
 
-
 # regex: HH:MM:SS.mmm --> HH:MM:SS.mmm [optional settings]
 TIMESTAMP_LINE_PATTERN = re.compile(
     r"(\d{2}:\d{2}\.\d{3}\s+-->\s+\d{2}:\d{2}\.\d{3}(?:[^\n]*))"
 )
-
 
 def get_original_translation(config: Dict[str, Any]) -> str:
 
@@ -193,7 +190,7 @@ def query_ollama(prompt: str, url: str, model: str) -> Optional[str]:
         data: Dict[str, Any] = response.json()
         return data.get("response", "").strip()
     except Exception as e:
-        logger.error(f"  [!] Request failed: {e}")
+        logger.error(f" Request failed: {e}")
         return None
 
 PLACEHOLDER_PATTERN = re.compile(r'TS\d+')

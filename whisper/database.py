@@ -733,34 +733,6 @@ def get_all_vtt_blobs():
         rows = cur.fetchall()
         logger.info(f"Retrieved {len(rows)} VTT file(s) from database.")
 
-        """ FOR DEBUGGING PURPOSES ONLY
-        for row in rows:
-            record_id, lecture_id, language, is_original_lang, vtt_data, txt_data, compute_type = (
-                row
-            )
-            print(f"--- Record ID: {record_id} ---")
-            print(f"Teletask ID: {lecture_id}")
-            print(f"Language: {language}")
-            print(f"Is Original Language: {isOriginalLang}")
-            print(f"VTT Data (size): {len(vtt_data)} bytes")
-            print(f"Compute Type: {compute_type}")
-            print(f"VTT Content:")
-            print("-" * 50)
-            # Convert memoryview to bytes, then decode to string for display
-            
-            try:
-                vtt_bytes = bytes(vtt_data)
-                vtt_content = vtt_bytes.decode("utf-8")
-                print(vtt_content)
-
-                txt_bytes = bytes(txt_data)
-                txt_content = txt_bytes.decode("utf-8")
-                print(txt_content)
-            except UnicodeDecodeError:
-                print("(Binary data could not be decoded as UTF-8)")
-            print("-" * 50)
-            print()
-            """
         return rows
 
     except (Exception, psycopg2.Error) as error:
@@ -790,10 +762,10 @@ def get_original_language_by_id(teletaskid):
             language = row[0]
             return language
         else:
-            print(f"No original language found for Teletask ID: {teletaskid}")
+            logger.info(f"No original language found for Teletask ID: {teletaskid}")
             return None
     except (Exception, psycopg2.Error) as error:
-        print("Error while querying PostgreSQL", error)
+        logger.error("Error while querying PostgreSQL", error)
         return None
     finally:
         if conn:
@@ -822,11 +794,11 @@ def get_original_vtt_by_id(teletaskid):
             vtt_content = vtt_bytes.decode("utf-8")
             return vtt_content
         else:
-            print(f"No original VTT found for Teletask ID: {teletaskid}")
+            logger.info(f"No original VTT found for Teletask ID: {teletaskid}")
             return None
 
     except (Exception, psycopg2.Error) as error:
-        print("Error while querying PostgreSQL", error)
+        logger.error("Error while querying PostgreSQL", error)
         return None
     finally:
         if conn:
