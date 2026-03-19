@@ -1,11 +1,13 @@
-from database import (
-    add_api_key, remove_api_key, get_all_api_keys, get_api_key_by_name, get_api_key_by_key,
-    getHighestTeletaskID ,get_all_lecture_ids, get_all_original_vtt_ids
-)
-from kratzer import getLecturerData, fetchBody, baseurl, pingVideoByID 
+from db.api_keys import add_api_key, remove_api_key, get_all_api_keys, get_api_key_by_name, get_api_key_by_key
+from db.vtt_files import getHighestTeletaskID, get_all_original_vtt_ids
+from db.lectures import get_all_lecture_ids
+from services.scraper import getLecturerData, fetchBody, pingVideoByID
+from config import BASE_URL
+
 import hashlib
 import argparse
 import os
+
 
 # --- API Management Commands ---
 
@@ -15,28 +17,29 @@ def handle_api_add(args):
     print(f"Action: Adding user.")
     print(f"Name: {args.name}")
     print(f"Email: {args.email}")
-    
-    # Generate a secure random seed (32 bytes = 256 bits of entropy)
-    random_seed = os.urandom(32) 
+
+    random_seed = os.urandom(32)
     sha256_hash = hashlib.sha256(random_seed).hexdigest()[:32]
-    
+
     print(f"Generated API Key: {sha256_hash}\n")
     add_api_key(sha256_hash, args.name, args.email)
     print("[SUCCESS] User added.\n")
+
 
 def handle_api_remove(args):
     """Remove an API key."""
     print(f"\n--- Remove Command ---")
     print(f"Action: Removing user by key.")
     print(f"Key to remove: {args.key}")
-    
+
     remove_api_key(args.key)
     print("[SUCCESS] Key removed.\n")
+
 
 def handle_api_show(args):
     """Show API key details."""
     print(f"\n--- Show Command ---")
-    
+
     if args.all:
         print("Displaying all registered users/keys:\n")
         keys = get_all_api_keys()
@@ -60,35 +63,33 @@ def handle_api_show(args):
         print("Please specify --all, --key, or --name")
     print()
 
+
 # --- Scrape Commands ---
 
-
 def handle_scrape_missing_lecture_data(args):
-    """
-    Fetches and updates missing lecture data for lectures that have original VTTs but lack lecturer data.
-    """
+    """Fetches and updates missing lecture data."""
     print("\n--- Fetching Missing Lecture Data ---\n")
-    
+
     all_lecture_ids = set(get_all_lecture_ids())
     all_vtt_ids = set(get_all_original_vtt_ids())
 
     missing_lecturer_data_ids = all_vtt_ids - all_lecture_ids
 
     print(f"Found {len(missing_lecturer_data_ids)} lectures with missing lecturer data.")
-    
+
     if not missing_lecturer_data_ids:
         print("No missing lecture data to fetch.\n")
         return
 
     for lecture_id in missing_lecturer_data_ids:
         try:
-            url = baseurl + str(lecture_id)
+            url = BASE_URL + str(lecture_id)
             response = fetchBody(str(lecture_id))
             lecturer_data = getLecturerData(str(lecture_id), response, url)
             print(f"✓ Lecture ID {lecture_id}: {lecturer_data}")
         except Exception as e:
             print(f"✗ Lecture ID {lecture_id}: Error - {e}")
-    
+
     print("\n--- Complete ---\n")
 
 
@@ -105,16 +106,16 @@ def handle_scrape_idstatus(args):
     if highest is None:
         print("No highest ID found in database. Please specify a starting ID.")
         return
-    
+
     start_id = args.start if args.start else highest
     count = args.count if args.count else 10
-    
+
     print(f"Checking {count} IDs starting from {start_id}...\n")
-    
+
     for i in range(count):
         current_id = start_id + i
         res = pingVideoByID(str(current_id))
-        
+
         if res == "200":
             res200.append(current_id)
             print(f"✓ {current_id}: Available (200)")
@@ -130,8 +131,7 @@ def handle_scrape_idstatus(args):
         else:
             resError.append(current_id)
             print(f"✗ {current_id}: Error ({res})")
-    
-    # Summary
+
     print("\n--- Summary ---")
     print(f"✓ Available (200): {len(res200)}")
     print(f"✗ Not Found (404): {len(res404)}")
@@ -146,11 +146,11 @@ def main():
     parser = argparse.ArgumentParser(
         description="Better Teletask CLI - Manage API keys and scrape lecture data.",
         epilog="Examples:\n"
-               "  python bttCli.py api add 'Crisitan' 'conzz@culator.zaza'\n"
-               "  python bttCli.py api show --all\n"
-               "  python bttCli.py api show --key 'your_api_key'\n"
-               "  python bttCli.py api show --name 'Crisitan'\n"
-               "  python bttCli.py scrape idstatus --count 20\n",
+               "  python -m cli.bttCli api add 'Crisitan' 'conzz@culator.zaza'\n"
+               "  python -m cli.bttCli api show --all\n"
+               "  python -m cli.bttCli api show --key 'your_api_key'\n"
+               "  python -m cli.bttCli api show --name 'Crisitan'\n"
+               "  python -m cli.bttCli scrape idstatus --count 20\n",
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
 
@@ -211,11 +211,12 @@ def main():
 
     # Parse and execute
     args = parser.parse_args()
-    
+
     if hasattr(args, 'func'):
         args.func(args)
     else:
         parser.print_help()
+
 
 if __name__ == '__main__':
     main()

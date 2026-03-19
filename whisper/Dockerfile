@@ -13,12 +13,18 @@ RUN pip install --no-cache-dir \
     torchaudio==2.4.0+cu124 \
     --index-url https://download.pytorch.org/whl/cu124
 
-COPY bttCli.py database.py index.py kratzer.py logger.py whisper.py chain.pem ./
+COPY config.py logger.py main.py chain.pem ./
+COPY models/ models/
+COPY db/ db/
+COPY services/ services/
+COPY workers/ workers/
+COPY api/ api/
+COPY cli/ cli/
 
 ENV HF_HOME=${HF_HOME:-/models/huggingface} \
     TORCH_HOME=${TORCH_HOME:-/models/torch} \
     LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-/usr/local/lib/python3.12/site-packages/nvidia/cudnn/lib/}
 
-RUN mkdir input output
+RUN mkdir -p input output
 
-CMD [ "python", "index.py" ]
+CMD [ "python", "main.py" ]
