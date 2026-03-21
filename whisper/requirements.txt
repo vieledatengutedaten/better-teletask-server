@@ -1,5 +1,6 @@
 whisperx
 psycopg2-binary
+sqlalchemy
 python-dotenv
 beautifulsoup4
 ffmpeg-python
@@ -9,3 +10,4 @@ webvtt-py == 0.5.1
 pytest
 pytest-asyncio
 httpx
+ffmpeg

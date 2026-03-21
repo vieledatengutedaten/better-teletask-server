@@ -4,7 +4,7 @@ import contextlib
 from fastapi import FastAPI
 
 # setup logging — must be imported before other modules to configure handlers
-import logger as _logger_init  # noqa: F401
+import logger
 import logging
 logger = logging.getLogger("btt_root_logger")
 

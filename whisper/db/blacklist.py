@@ -1,46 +1,53 @@
-import psycopg2
+from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.exc import SQLAlchemyError
+
 from db.connection import get_connection
+from db.schema import BlacklistIdRecord
 from db.vtt_files import get_missing_inbetween_ids
 
+import logger
 import logging
 logger = logging.getLogger("btt_root_logger")
 
 
 def add_id_to_blacklist(teletaskid, reason):
-    conn = None
+    session = None
     try:
-        conn = get_connection()
-        cur = conn.cursor()
-        cur.execute(
-            "INSERT INTO blacklist_ids (lecture_id, reason) VALUES (%s, %s) ON CONFLICT (lecture_id) DO UPDATE SET times_tried = blacklist_ids.times_tried + 1, reason = EXCLUDED.reason;",
-            (teletaskid, reason),
+        session = get_connection()
+        insert_stmt = pg_insert(BlacklistIdRecord).values(
+            lecture_id=teletaskid,
+            reason=reason,
         )
-        conn.commit()
+        stmt = insert_stmt.on_conflict_do_update(
+            index_elements=[BlacklistIdRecord.lecture_id],
+            set_={
+                "times_tried": BlacklistIdRecord.times_tried + 1,
+                "reason": insert_stmt.excluded.reason,
+            },
+        )
+        session.execute(stmt)
+        session.commit()
         logger.info(f"Successfully added Teletask ID {teletaskid} to blacklist.")
-    except (Exception, psycopg2.Error) as error:
+    except SQLAlchemyError as error:
         logger.error(f"Error while connecting to PostgreSQL: {error}")
     finally:
-        if conn:
-            cur.close()
-            conn.close()
+        if session:
+            session.close()
 
 
 def get_blacklisted_ids():
-    conn = None
+    session = None
     try:
-        conn = get_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT lecture_id FROM blacklist_ids;")
-        rows = cur.fetchall()
-        ids = [row[0] for row in rows]
-        return ids
-    except (Exception, psycopg2.Error) as error:
+        session = get_connection()
+        rows = session.execute(select(BlacklistIdRecord.lecture_id)).all()
+        return [row[0] for row in rows]
+    except SQLAlchemyError as error:
         logger.error(f"Error while querying PostgreSQL: {error}")
         return []
     finally:
-        if conn:
-            cur.close()
-            conn.close()
+        if session:
+            session.close()
 
 
 def get_missing_available_inbetween_ids():

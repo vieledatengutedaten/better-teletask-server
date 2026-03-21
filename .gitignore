@@ -2,6 +2,7 @@
 node_modules
 crawl_results.txt
 *.mp3
+*.mp4
 *.vtt
 *.pyc
 [0-9]*.txt

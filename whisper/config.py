@@ -13,6 +13,7 @@ DB_PORT = os.environ.get("DB_PORT")
 # --- Whisper / ASR ---
 ASR_MODEL = os.environ.get("ASR_MODEL")
 COMPUTE_TYPE = os.environ.get("COMPUTE_TYPE")
+DEVICE = os.environ.get("DEVICE", "cuda")
 
 # --- Paths ---
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))

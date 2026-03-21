@@ -6,6 +6,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from config import OLLAMA_URL, OLLAMA_MODEL, OUTPUT_PATH
 from db.vtt_files import get_original_vtt_by_id, get_original_language_by_id
 
+import logger
 import logging
 logger = logging.getLogger("btt_root_logger")
 

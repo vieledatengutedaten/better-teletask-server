@@ -9,6 +9,7 @@ from config import USERNAME_COOKIE, BASE_URL
 from db.lectures import add_lecture_data, get_language_of_lecture
 from db.vtt_files import getHighestTeletaskID
 
+import logger
 import logging
 logger = logging.getLogger("btt_root_logger")
 

@@ -2,8 +2,8 @@
 Shared test fixtures for the Better Teletask test suite.
 
 Key concepts:
-- mock_db_conn: provides a fake psycopg2 connection + cursor so that
-  db.* modules can be tested without a running PostgreSQL instance.
+- patch_get_connection: provides a fake SQLAlchemy Session so that
+    db.* modules can be tested without a running PostgreSQL instance.
 - mock_config: patches config module values for deterministic tests.
 """
 
@@ -17,24 +17,23 @@ from datetime import datetime, timedelta
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def mock_cursor():
-    """A MagicMock that behaves like a psycopg2 cursor."""
-    cursor = MagicMock()
-    cursor.fetchone.return_value = None
-    cursor.fetchall.return_value = []
-    return cursor
+def mock_result():
+    """A MagicMock that behaves like a SQLAlchemy Result."""
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = None
+    result.scalar_one.return_value = 0
+    result.first.return_value = None
+    result.all.return_value = []
+    result.scalars.return_value.all.return_value = []
+    return result
 
 
 @pytest.fixture
-def mock_conn(mock_cursor):
-    """A MagicMock that behaves like a psycopg2 connection.
-    
-    Calling conn.cursor() returns the shared mock_cursor fixture,
-    so you can assert on executed SQL via mock_cursor.execute.
-    """
-    conn = MagicMock()
-    conn.cursor.return_value = mock_cursor
-    return conn
+def mock_conn(mock_result):
+    """A MagicMock that behaves like a SQLAlchemy Session."""
+    session = MagicMock()
+    session.execute.return_value = mock_result
+    return session
 
 
 @pytest.fixture
@@ -44,16 +43,15 @@ def patch_get_connection(mock_conn):
     Because each db.* module does `from db.connection import get_connection`,
     the name is bound locally in each module. We must patch at every usage site.
 
-    Yields (mock_conn, mock_cursor) for easy assertion access.
+    Yields (mock_session, mock_result) for easy assertion access.
 
     Example:
         def test_something(patch_get_connection):
-            conn, cur = patch_get_connection
-            cur.fetchall.return_value = [(1,), (2,)]
+            session, result = patch_get_connection
+            result.all.return_value = [(1,), (2,)]
             result = some_db_function()
             assert result == [1, 2]
     """
-    mock_cursor = mock_conn.cursor()
     targets = [
         "db.connection.get_connection",
         "db.api_keys.get_connection",
@@ -61,12 +59,11 @@ def patch_get_connection(mock_conn):
         "db.vtt_files.get_connection",
         "db.vtt_lines.get_connection",
         "db.blacklist.get_connection",
-        "db.migrations.get_connection",
     ]
     patches = [patch(t, return_value=mock_conn) for t in targets]
     for p in patches:
         p.start()
-    yield mock_conn, mock_cursor
+    yield mock_conn, mock_conn.execute.return_value
     for p in patches:
         p.stop()
 

@@ -4,6 +4,7 @@ from db.vtt_lines import bulk_insert_vtt_lines
 from db.lectures import get_series_of_vtt_file
 from models import VttFile, VttLine
 
+import logger
 import logging
 logger = logging.getLogger("btt_root_logger")
 

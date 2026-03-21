@@ -1,136 +1,112 @@
-import psycopg2
+from sqlalchemy import delete, select
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.exc import SQLAlchemyError
+
 from db.connection import get_connection
+from db.schema import ApiKeyRecord
 from models import ApiKey
 
+import logger
 import logging
 logger = logging.getLogger("btt_root_logger")
 
 
+def _to_api_key(record: ApiKeyRecord) -> ApiKey:
+    return ApiKey(
+        id=record.id,
+        api_key=record.api_key,
+        person_name=record.person_name,
+        person_email=record.person_email,
+        creation_date=record.creation_date,
+        expiration_date=record.expiration_date,
+        status=record.status,
+    )
+
+
 def add_api_key(api_key, person_name, person_email):
-    conn = None
+    session = None
     try:
-        conn = get_connection()
-        cur = conn.cursor()
-        cur.execute(
-            "INSERT INTO api_keys (api_key, person_name, person_email) VALUES (%s, %s, %s) ON CONFLICT (api_key) DO NOTHING;",
-            (api_key, person_name, person_email),
+        session = get_connection()
+        stmt = insert(ApiKeyRecord).values(
+            api_key=api_key,
+            person_name=person_name,
+            person_email=person_email,
         )
-        conn.commit()
-    except (Exception, psycopg2.Error) as error:
+        stmt = stmt.on_conflict_do_nothing(index_elements=[ApiKeyRecord.api_key])
+        session.execute(stmt)
+        session.commit()
+    except SQLAlchemyError as error:
         logger.error(f"Error while connecting to PostgreSQL: {error}")
     finally:
-        if conn:
-            cur.close()
-            conn.close()
+        if session:
+            session.close()
 
 
 def get_api_key_by_key(api_key) -> ApiKey | None:
-    conn = None
+    session = None
     try:
-        conn = get_connection()
-        cur = conn.cursor()
-        cur.execute(
-            "SELECT api_key, person_name, person_email, creation_date, expiration_date, status FROM api_keys WHERE api_key = %s;",
-            (api_key,),
-        )
-        row = cur.fetchone()
-        if row:
-            return ApiKey(
-                api_key=row[0],
-                person_name=row[1],
-                person_email=row[2],
-                creation_date=row[3],
-                expiration_date=row[4],
-                status=row[5],
-            )
-        else:
-            logger.info(f"No API key found: {api_key}")
-            return None
-    except (Exception, psycopg2.Error) as error:
+        session = get_connection()
+        record = session.execute(
+            select(ApiKeyRecord).where(ApiKeyRecord.api_key == api_key)
+        ).scalar_one_or_none()
+        if record:
+            return _to_api_key(record)
+        logger.info(f"No API key found: {api_key}")
+        return None
+    except SQLAlchemyError as error:
         logger.error(f"Error while querying PostgreSQL: {error}")
         return None
     finally:
-        if conn:
-            cur.close()
-            conn.close()
+        if session:
+            session.close()
 
 
 def get_api_key_by_name(person_name) -> list[ApiKey] | None:
-    conn = None
+    session = None
     try:
-        conn = get_connection()
-        cur = conn.cursor()
-        cur.execute(
-            "SELECT api_key, person_name, person_email, creation_date, expiration_date, status FROM api_keys WHERE person_name = %s;",
-            (person_name,),
-        )
-        rows = cur.fetchall()
-        api_keys = [
-            ApiKey(
-                api_key=row[0],
-                person_name=row[1],
-                person_email=row[2],
-                creation_date=row[3],
-                expiration_date=row[4],
-                status=row[5],
-            )
-            for row in rows
-        ]
+        session = get_connection()
+        records = session.execute(
+            select(ApiKeyRecord).where(ApiKeyRecord.person_name == person_name)
+        ).scalars().all()
+
+        api_keys = [_to_api_key(record) for record in records]
         if api_keys:
             return api_keys
-        else:
-            logger.info(f"No API key found for person name: {person_name}")
-            return None
-    except (Exception, psycopg2.Error) as error:
+        logger.info(f"No API key found for person name: {person_name}")
+        return None
+    except SQLAlchemyError as error:
         logger.error(f"Error while querying PostgreSQL: {error}")
         return None
     finally:
-        if conn:
-            cur.close()
-            conn.close()
+        if session:
+            session.close()
 
 
 def get_all_api_keys() -> list[ApiKey]:
-    conn = None
+    session = None
     try:
-        conn = get_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT api_key, person_name, person_email, creation_date, expiration_date, status FROM api_keys;")
-        rows = cur.fetchall()
-        return [
-            ApiKey(
-                api_key=row[0],
-                person_name=row[1],
-                person_email=row[2],
-                creation_date=row[3],
-                expiration_date=row[4],
-                status=row[5],
-            )
-            for row in rows
-        ]
-    except (Exception, psycopg2.Error) as error:
+        session = get_connection()
+        records = session.execute(select(ApiKeyRecord)).scalars().all()
+        return [_to_api_key(record) for record in records]
+    except SQLAlchemyError as error:
         logger.error(f"Error while querying PostgreSQL: {error}")
         return []
     finally:
-        if conn:
-            cur.close()
-            conn.close()
+        if session:
+            session.close()
 
 
 def remove_api_key(api_key):
-    conn = None
+    session = None
     try:
-        conn = get_connection()
-        cur = conn.cursor()
-        cur.execute(
-            "DELETE FROM api_keys WHERE api_key = %s;",
-            (api_key,)
+        session = get_connection()
+        session.execute(
+            delete(ApiKeyRecord).where(ApiKeyRecord.api_key == api_key)
         )
-        conn.commit()
+        session.commit()
         logger.info(f"Successfully removed API key: {api_key}")
-    except (Exception, psycopg2.Error) as error:
+    except SQLAlchemyError as error:
         logger.error(f"Error while connecting to PostgreSQL: {error}")
     finally:
-        if conn:
-            cur.close()
-            conn.close()
+        if session:
+            session.close()

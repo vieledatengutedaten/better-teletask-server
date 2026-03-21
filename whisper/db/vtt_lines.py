@@ -1,8 +1,12 @@
-import psycopg2
-from psycopg2.extras import execute_values
+from sqlalchemy import text
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.exc import SQLAlchemyError
+
 from db.connection import get_connection
+from db.schema import VttLineRecord
 from models import VttLine, SearchResult
 
+import logger
 import logging
 logger = logging.getLogger("btt_root_logger")
 
@@ -10,28 +14,32 @@ logger = logging.getLogger("btt_root_logger")
 def bulk_insert_vtt_lines(vtt_lines: list[VttLine]):
     if not vtt_lines:
         return
-    conn = None
+
+    session = None
     try:
-        conn = get_connection()
-        cur = conn.cursor()
+        session = get_connection()
         values = [
-            (line.vtt_file_id, line.series_id, line.language, line.lecturer_ids, line.line_number, line.ts_start, line.ts_end, line.content)
+            {
+                "vtt_file_id": line.vtt_file_id,
+                "series_id": line.series_id,
+                "language": line.language,
+                "lecturer_ids": line.lecturer_ids,
+                "line_number": line.line_number,
+                "ts_start": line.ts_start,
+                "ts_end": line.ts_end,
+                "content": line.content,
+            }
             for line in vtt_lines
         ]
-        execute_values(
-            cur,
-            "INSERT INTO vtt_lines (vtt_file_id, series_id, language, lecturer_ids, line_number, ts_start, ts_end, content) VALUES %s",
-            values,
-            page_size=1000
-        )
-        conn.commit()
+
+        session.execute(pg_insert(VttLineRecord), values)
+        session.commit()
         logger.info(f"Bulk inserted {len(vtt_lines)} VTT lines.")
-    except (Exception, psycopg2.Error) as error:
+    except SQLAlchemyError as error:
         logger.error(f"Error while bulk inserting VTT lines: {error}")
     finally:
-        if conn:
-            cur.close()
-            conn.close()
+        if session:
+            session.close()
 
 
 def search_vtt_lines(
@@ -53,34 +61,37 @@ def search_vtt_lines(
         threshold    - minimum similarity score (0-1, lower = more results)
         limit        - max rows returned
     """
-    conn = None
+    session = None
     try:
-        conn = get_connection()
-        cur = conn.cursor()
+        session = get_connection()
 
-        filters = ["similarity(vl.content, %s) >= %s"]
-        params: list = [query, threshold]
+        filters = ["similarity(vl.content, :query_where) >= :threshold"]
+        params: dict[str, object] = {
+            "query_where": query,
+            "query_select": query,
+            "threshold": threshold,
+            "limit": limit,
+        }
 
         if series_id is not None:
-            filters.append("vl.series_id = %s")
-            params.append(series_id)
+            filters.append("vl.series_id = :series_id")
+            params["series_id"] = series_id
 
         if language is not None:
-            filters.append("vl.language = %s")
-            params.append(language)
+            filters.append("vl.language = :language")
+            params["language"] = language
 
         if lecturer_id is not None:
-            filters.append("%s = ANY(vl.lecturer_ids)")
-            params.append(lecturer_id)
+            filters.append(":lecturer_id = ANY(vl.lecturer_ids)")
+            params["lecturer_id"] = lecturer_id
 
         if lecture_id is not None:
-            filters.append("vf.lecture_id = %s")
-            params.append(lecture_id)
+            filters.append("vf.lecture_id = :lecture_id")
+            params["lecture_id"] = lecture_id
 
-        where = " AND ".join(filters)
-        params.append(limit)
-
-        sql = f"""
+        where_clause = " AND ".join(filters)
+        sql = text(
+            f"""
             SELECT
                 vl.vtt_file_id,
                 vf.lecture_id,
@@ -91,18 +102,17 @@ def search_vtt_lines(
                 vl.ts_start,
                 vl.ts_end,
                 vl.content,
-                similarity(vl.content, %s) AS similarity
+                similarity(vl.content, :query_select) AS similarity
             FROM vtt_lines vl
             JOIN vtt_files vf   ON vf.id = vl.vtt_file_id
             JOIN series_data sd ON sd.series_id = vl.series_id
-            WHERE {where}
+            WHERE {where_clause}
             ORDER BY similarity DESC
-            LIMIT %s
-        """
+            LIMIT :limit
+            """
+        )
 
-        # The first %s in the SELECT is for similarity(); prepend query again
-        cur.execute(sql, [query] + params)
-        rows = cur.fetchall()
+        rows = session.execute(sql, params).all()
 
         return [
             SearchResult(
@@ -119,10 +129,9 @@ def search_vtt_lines(
             )
             for row in rows
         ]
-    except (Exception, psycopg2.Error) as error:
+    except SQLAlchemyError as error:
         logger.error(f"Error while searching VTT lines: {error}")
         return []
     finally:
-        if conn:
-            cur.close()
-            conn.close()
+        if session:
+            session.close()

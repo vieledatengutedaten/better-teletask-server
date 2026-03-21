@@ -1,28 +1,43 @@
-import psycopg2
 from datetime import datetime
+
+from sqlalchemy import func, select, text
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.exc import SQLAlchemyError
+
 from db.connection import get_connection
+from db.schema import (
+    LectureDataRecord,
+    LecturerDataRecord,
+    SeriesDataRecord,
+    VttFileRecord,
+)
 from models import SeriesData
 
+import logger
 import logging
 logger = logging.getLogger("btt_root_logger")
 
 
 def get_series_of_vtt_file(vtt_file_id) -> SeriesData | None:
-    conn = None
+    session = None
     try:
-        conn = get_connection()
-        cur = conn.cursor()
-        cur.execute(
-            """
-            SELECT s.series_id, s.series_name, s.lecturer_ids
-            FROM vtt_files vf
-            JOIN lecture_data ld ON vf.lecture_id = ld.lecture_id
-            JOIN series_data s ON ld.series_id = s.series_id
-            WHERE vf.id = %s;
-            """,
-            (vtt_file_id,),
-        )
-        row = cur.fetchone()
+        session = get_connection()
+        row = session.execute(
+            select(
+                SeriesDataRecord.series_id,
+                SeriesDataRecord.series_name,
+                SeriesDataRecord.lecturer_ids,
+            )
+            .join(
+                LectureDataRecord,
+                LectureDataRecord.series_id == SeriesDataRecord.series_id,
+            )
+            .join(
+                VttFileRecord,
+                VttFileRecord.lecture_id == LectureDataRecord.lecture_id,
+            )
+            .where(VttFileRecord.id == vtt_file_id)
+        ).first()
         if row:
             return SeriesData(
                 series_id=row[0],
@@ -31,177 +46,184 @@ def get_series_of_vtt_file(vtt_file_id) -> SeriesData | None:
             )
         logger.info(f"No series found for VTT file ID: {vtt_file_id}")
         return None
-    except (Exception, psycopg2.Error) as error:
+    except SQLAlchemyError as error:
         logger.error(f"Error while querying PostgreSQL: {error}")
         return None
     finally:
-        if conn:
-            cur.close()
-            conn.close()
+        if session:
+            session.close()
 
 
 def get_all_lecture_ids():
-    conn = None
+    session = None
     try:
-        conn = get_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT lecture_id FROM lecture_data;")
-        rows = cur.fetchall()
+        session = get_connection()
+        rows = session.execute(select(LectureDataRecord.lecture_id)).all()
         ids = [row[0] for row in rows]
         logger.debug(f"Fetched all lecture IDs: {ids}")
         return ids
-    except (Exception, psycopg2.Error) as error:
+    except SQLAlchemyError as error:
         logger.error(f"Error while querying PostgreSQL: {error}")
         return []
     finally:
-        if conn:
-            cur.close()
-            conn.close()
+        if session:
+            session.close()
 
 
 def series_id_exists(series_id):
-    conn = None
+    session = None
     try:
-        conn = get_connection()
-        cur = conn.cursor()
-        cur.execute(
-            "SELECT COUNT(*) FROM series_data WHERE series_id = %s;",
-            (series_id,),
-        )
-        count = cur.fetchone()[0]
+        session = get_connection()
+        count = session.execute(
+            select(func.count())
+            .select_from(SeriesDataRecord)
+            .where(SeriesDataRecord.series_id == series_id)
+        ).scalar_one()
         return count > 0
-    except (Exception, psycopg2.Error) as error:
+    except SQLAlchemyError as error:
         logger.error(f"Error while querying PostgreSQL: {error}")
         return False
     finally:
-        if conn:
-            cur.close()
-            conn.close()
+        if session:
+            session.close()
 
 
 def lecturer_id_exists(lecturer_id):
-    conn = None
+    session = None
     try:
-        conn = get_connection()
-        cur = conn.cursor()
-        cur.execute(
-            "SELECT COUNT(*) FROM lecturer_data WHERE lecturer_id = %s;",
-            (lecturer_id,),
-        )
-        count = cur.fetchone()[0]
+        session = get_connection()
+        count = session.execute(
+            select(func.count())
+            .select_from(LecturerDataRecord)
+            .where(LecturerDataRecord.lecturer_id == lecturer_id)
+        ).scalar_one()
         return count > 0
-    except (Exception, psycopg2.Error) as error:
+    except SQLAlchemyError as error:
         logger.error(f"Error while querying PostgreSQL: {error}")
         return False
     finally:
-        if conn:
-            cur.close()
-            conn.close()
+        if session:
+            session.close()
 
 
 def add_lecture_data(lecture_data):
-    conn = None
+    session = None
     try:
-        conn = get_connection()
-        cur = conn.cursor()
+        session = get_connection()
 
-        teletaskid = lecture_data['lecture_id']
-        lecturer_ids = lecture_data['lecturer_ids']
-        lecturer_names = lecture_data['lecturer_names']
-        date = lecture_data['date']
-        date = datetime.strptime(date, "%B %d, %Y")
-        language = lecture_data['language']
-        language = "en" if language == "English" else "de"
-        duration = lecture_data['duration']
-        lecture_title = lecture_data['lecture_title']
-        series_id = lecture_data['series_id']
-        series_name = lecture_data['series_name']
-        url = lecture_data['url']
+        teletaskid = lecture_data["lecture_id"]
+        lecturer_ids = lecture_data["lecturer_ids"]
+        lecturer_names = lecture_data["lecturer_names"]
+        lecture_date = datetime.strptime(lecture_data["date"], "%B %d, %Y").date()
+        language = "en" if lecture_data["language"] == "English" else "de"
+        duration = lecture_data["duration"]
+        lecture_title = lecture_data["lecture_title"]
+        series_id = lecture_data["series_id"]
+        series_name = lecture_data["series_name"]
+        url = lecture_data["url"]
 
-        if date.month < 3 or date.month > 10:
-            semester = f"WT {date.year-1}/{date.year}"
+        if lecture_date.month < 3 or lecture_date.month > 10:
+            semester = f"WT {lecture_date.year-1}/{lecture_date.year}"
         else:
-            semester = f"ST {date.year}"
+            semester = f"ST {lecture_date.year}"
 
-        for lecturer_id in lecturer_ids:
-            if not lecturer_id_exists(lecturer_id):
-                cur.execute(
-                    "INSERT INTO lecturer_data (lecturer_id, lecturer_name) VALUES (%s, %s) ON CONFLICT (lecturer_id) DO NOTHING;",
-                    (
-                        lecturer_id,
-                        lecturer_names[lecturer_ids.index(lecturer_id)]
-                    ),
+        for lecturer_id, lecturer_name in zip(lecturer_ids, lecturer_names):
+            exists = session.execute(
+                select(func.count())
+                .select_from(LecturerDataRecord)
+                .where(LecturerDataRecord.lecturer_id == lecturer_id)
+            ).scalar_one()
+            if not exists:
+                stmt = pg_insert(LecturerDataRecord).values(
+                    lecturer_id=lecturer_id,
+                    lecturer_name=lecturer_name,
                 )
-                logger.info(f"Added lecturer data for Lecturer ID {lecturer_id}.", extra={'id': teletaskid})
-                conn.commit()
+                stmt = stmt.on_conflict_do_nothing(index_elements=[LecturerDataRecord.lecturer_id])
+                session.execute(stmt)
+                logger.info(
+                    f"Added lecturer data for Lecturer ID {lecturer_id}.",
+                    extra={"id": teletaskid},
+                )
+                session.commit()
 
-        if not series_id_exists(series_id):
-            cur.execute(
-                "INSERT INTO series_data (series_id, series_name, lecturer_ids) VALUES (%s, %s, %s::INTEGER[]) ON CONFLICT (series_id) DO NOTHING;",
-                (
-                    series_id,
-                    series_name,
-                    lecturer_ids
-                ),
+        series_exists = session.execute(
+            select(func.count())
+            .select_from(SeriesDataRecord)
+            .where(SeriesDataRecord.series_id == series_id)
+        ).scalar_one()
+
+        if not series_exists:
+            stmt = pg_insert(SeriesDataRecord).values(
+                series_id=series_id,
+                series_name=series_name,
+                lecturer_ids=lecturer_ids,
             )
-            logger.info(f"Added series data for Series ID {series_id}.", extra={'id': teletaskid})
-            conn.commit()
+            stmt = stmt.on_conflict_do_nothing(index_elements=[SeriesDataRecord.series_id])
+            session.execute(stmt)
+            logger.info(
+                f"Added series data for Series ID {series_id}.",
+                extra={"id": teletaskid},
+            )
+            session.commit()
         else:
-            cur.execute(
-                "UPDATE series_data SET lecturer_ids = array(SELECT DISTINCT unnest(lecturer_ids || CAST(%s AS INTEGER[]))) WHERE series_id = %s;",
-                (
-                    lecturer_ids,
-                    series_id
+            session.execute(
+                text(
+                    """
+                    UPDATE series_data
+                    SET lecturer_ids = array(
+                        SELECT DISTINCT unnest(lecturer_ids || CAST(:lecturer_ids AS INTEGER[]))
+                    )
+                    WHERE series_id = :series_id;
+                    """
                 ),
+                {
+                    "lecturer_ids": lecturer_ids,
+                    "series_id": series_id,
+                },
             )
-            logger.info(f"Updated lecturer IDs for Series ID {series_id}.", extra={'id': teletaskid})
-            conn.commit()
+            logger.info(
+                f"Updated lecturer IDs for Series ID {series_id}.",
+                extra={"id": teletaskid},
+            )
+            session.commit()
 
-        cur.execute(
-            "INSERT INTO lecture_data (lecture_id, language, date, lecturer_ids, series_id, semester, duration, title, video_mp4) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);",
-            (
-                teletaskid,
-                language,
-                date,
-                lecturer_ids,
-                series_id,
-                semester,
-                duration,
-                lecture_title,
-                url
-            ),
+        session.execute(
+            pg_insert(LectureDataRecord).values(
+                lecture_id=teletaskid,
+                language=language,
+                date=lecture_date,
+                lecturer_ids=lecturer_ids,
+                series_id=series_id,
+                semester=semester,
+                duration=duration,
+                title=lecture_title,
+                video_mp4=url,
+            )
         )
+        session.commit()
 
-        conn.commit()
-
-    except (psycopg2.Error) as error:
+    except SQLAlchemyError as error:
         logger.error(f"Error while connecting to PostgreSQL: {error}")
     finally:
-        if conn:
-            cur.close()
-            conn.close()
+        if session:
+            session.close()
 
 
 def get_language_of_lecture(teletaskid) -> str:
-    conn = None
+    session = None
     try:
-        conn = get_connection()
-        cur = conn.cursor()
-        cur.execute(
-            "SELECT language FROM lecture_data WHERE lecture_id = %s;",
-            (teletaskid,),
-        )
-        row = cur.fetchone()
+        session = get_connection()
+        language = session.execute(
+            select(LectureDataRecord.language).where(LectureDataRecord.lecture_id == teletaskid)
+        ).scalar_one_or_none()
 
-        if row:
-            return row[0]
-        else:
-            logger.info(f"No lecture data found for Teletask ID: {teletaskid}")
-            return None
-    except (Exception, psycopg2.Error) as error:
+        if language:
+            return language
+        logger.info(f"No lecture data found for Teletask ID: {teletaskid}")
+        return None
+    except SQLAlchemyError as error:
         logger.error(f"Error while querying PostgreSQL: {error}")
         return None
     finally:
-        if conn:
-            cur.close()
-            conn.close()
+        if session:
+            session.close()

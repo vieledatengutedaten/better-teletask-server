@@ -1,3 +1,4 @@
+import logger
 import logging
 
 from config import INPUT_PATH

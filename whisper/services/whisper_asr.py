@@ -1,5 +1,5 @@
 # setup logging
-import logger as _logger_init  # noqa: F401  — triggers logger configuration
+import logger
 import logging
 logger = logging.getLogger("btt_root_logger")
 logger.propagate = False
@@ -8,10 +8,10 @@ import whisperx
 import os
 from whisperx.utils import get_writer
 
-from config import ASR_MODEL, COMPUTE_TYPE, INPUT_PATH, OUTPUT_PATH
+from config import ASR_MODEL, COMPUTE_TYPE, INPUT_PATH, OUTPUT_PATH, DEVICE
 from db.lectures import get_language_of_lecture
 
-device = "cuda"
+device = DEVICE
 model = whisperx.load_model(ASR_MODEL, device=device, compute_type=COMPUTE_TYPE)
 
 

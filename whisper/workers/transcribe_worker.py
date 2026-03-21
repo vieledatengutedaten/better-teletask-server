@@ -9,6 +9,7 @@ from workers.queues import (
     in_process_queue, multi_lock,
 )
 
+import logger
 import logging
 logger = logging.getLogger("btt_root_logger")
 

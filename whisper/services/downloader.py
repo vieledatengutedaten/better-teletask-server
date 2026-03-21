@@ -1,5 +1,6 @@
 import os
 import requests
+import logger
 import logging
 from tqdm import tqdm
 import ffmpeg
