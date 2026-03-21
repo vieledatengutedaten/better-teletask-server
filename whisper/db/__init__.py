@@ -1,4 +1,4 @@
-from db.connection import get_connection
+from db.connection import get_session
 from db.migrations import initDatabase, clearDatabase
 from db.lectures import (
     get_series_of_vtt_file,
@@ -38,7 +38,7 @@ from db.blacklist import (
 
 __all__ = [
     # connection
-    "get_connection",
+    "get_session",
     # migrations
     "initDatabase",
     "clearDatabase",

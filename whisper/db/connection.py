@@ -36,7 +36,3 @@ def get_session() -> Session:
     """Create and return a new SQLAlchemy session."""
     return SessionLocal()
 
-
-def get_connection() -> Session:
-    """Backward-compatible alias for callers that still import get_connection."""
-    return get_session()

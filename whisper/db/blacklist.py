@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import SQLAlchemyError
 
-from db.connection import get_connection
+from db.connection import get_session
 from db.schema import BlacklistIdRecord
 from db.vtt_files import get_missing_inbetween_ids
 
@@ -14,7 +14,7 @@ logger = logging.getLogger("btt_root_logger")
 def add_id_to_blacklist(teletaskid, reason):
     session = None
     try:
-        session = get_connection()
+        session = get_session()
         insert_stmt = pg_insert(BlacklistIdRecord).values(
             lecture_id=teletaskid,
             reason=reason,
@@ -39,7 +39,7 @@ def add_id_to_blacklist(teletaskid, reason):
 def get_blacklisted_ids():
     session = None
     try:
-        session = get_connection()
+        session = get_session()
         rows = session.execute(select(BlacklistIdRecord.lecture_id)).all()
         return [row[0] for row in rows]
     except SQLAlchemyError as error:

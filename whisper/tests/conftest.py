@@ -2,7 +2,7 @@
 Shared test fixtures for the Better Teletask test suite.
 
 Key concepts:
-- patch_get_connection: provides a fake SQLAlchemy Session so that
+- patch_get_session: provides a fake SQLAlchemy Session so that
     db.* modules can be tested without a running PostgreSQL instance.
 - mock_config: patches config module values for deterministic tests.
 """
@@ -37,28 +37,28 @@ def mock_conn(mock_result):
 
 
 @pytest.fixture
-def patch_get_connection(mock_conn):
-    """Patches get_connection everywhere it was imported.
+def patch_get_session(mock_conn):
+    """Patches get_session everywhere it was imported.
 
-    Because each db.* module does `from db.connection import get_connection`,
+    Because each db.* module does `from db.connection import get_session`,
     the name is bound locally in each module. We must patch at every usage site.
 
     Yields (mock_session, mock_result) for easy assertion access.
 
     Example:
-        def test_something(patch_get_connection):
-            session, result = patch_get_connection
+        def test_something(patch_get_session):
+            session, result = patch_get_session
             result.all.return_value = [(1,), (2,)]
             result = some_db_function()
             assert result == [1, 2]
     """
     targets = [
-        "db.connection.get_connection",
-        "db.api_keys.get_connection",
-        "db.lectures.get_connection",
-        "db.vtt_files.get_connection",
-        "db.vtt_lines.get_connection",
-        "db.blacklist.get_connection",
+        "db.connection.get_session",
+        "db.api_keys.get_session",
+        "db.lectures.get_session",
+        "db.vtt_files.get_session",
+        "db.vtt_lines.get_session",
+        "db.blacklist.get_session",
     ]
     patches = [patch(t, return_value=mock_conn) for t in targets]
     for p in patches:

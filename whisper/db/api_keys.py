@@ -2,7 +2,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import SQLAlchemyError
 
-from db.connection import get_connection
+from db.connection import get_session
 from db.schema import ApiKeyRecord
 from models import ApiKey
 
@@ -26,7 +26,7 @@ def _to_api_key(record: ApiKeyRecord) -> ApiKey:
 def add_api_key(api_key, person_name, person_email):
     session = None
     try:
-        session = get_connection()
+        session = get_session()
         stmt = insert(ApiKeyRecord).values(
             api_key=api_key,
             person_name=person_name,
@@ -45,7 +45,7 @@ def add_api_key(api_key, person_name, person_email):
 def get_api_key_by_key(api_key) -> ApiKey | None:
     session = None
     try:
-        session = get_connection()
+        session = get_session()
         record = session.execute(
             select(ApiKeyRecord).where(ApiKeyRecord.api_key == api_key)
         ).scalar_one_or_none()
@@ -64,7 +64,7 @@ def get_api_key_by_key(api_key) -> ApiKey | None:
 def get_api_key_by_name(person_name) -> list[ApiKey] | None:
     session = None
     try:
-        session = get_connection()
+        session = get_session()
         records = session.execute(
             select(ApiKeyRecord).where(ApiKeyRecord.person_name == person_name)
         ).scalars().all()
@@ -85,7 +85,7 @@ def get_api_key_by_name(person_name) -> list[ApiKey] | None:
 def get_all_api_keys() -> list[ApiKey]:
     session = None
     try:
-        session = get_connection()
+        session = get_session()
         records = session.execute(select(ApiKeyRecord)).scalars().all()
         return [_to_api_key(record) for record in records]
     except SQLAlchemyError as error:
@@ -99,7 +99,7 @@ def get_all_api_keys() -> list[ApiKey]:
 def remove_api_key(api_key):
     session = None
     try:
-        session = get_connection()
+        session = get_session()
         session.execute(
             delete(ApiKeyRecord).where(ApiKeyRecord.api_key == api_key)
         )

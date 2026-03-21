@@ -2,7 +2,7 @@ from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import SQLAlchemyError
 
-from db.connection import get_connection
+from db.connection import get_session
 from db.schema import VttLineRecord
 from models import VttLine, SearchResult
 
@@ -17,7 +17,7 @@ def bulk_insert_vtt_lines(vtt_lines: list[VttLine]):
 
     session = None
     try:
-        session = get_connection()
+        session = get_session()
         values = [
             {
                 "vtt_file_id": line.vtt_file_id,
@@ -63,7 +63,7 @@ def search_vtt_lines(
     """
     session = None
     try:
-        session = get_connection()
+        session = get_session()
 
         filters = ["similarity(vl.content, :query_where) >= :threshold"]
         params: dict[str, object] = {

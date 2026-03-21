@@ -4,7 +4,7 @@ from sqlalchemy import desc, func, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import SQLAlchemyError
 
-from db.connection import get_connection
+from db.connection import get_session
 from db.schema import VttFileRecord
 from models import VttFile
 from config import OUTPUT_PATH, ASR_MODEL, COMPUTE_TYPE
@@ -31,7 +31,7 @@ def _to_vtt_file(record: VttFileRecord) -> VttFile:
 def get_all_original_vtt_ids():
     session = None
     try:
-        session = get_connection()
+        session = get_session()
         rows = session.execute(
             select(VttFileRecord.lecture_id).where(VttFileRecord.is_original_lang.is_(True))
         ).all()
@@ -49,7 +49,7 @@ def get_all_original_vtt_ids():
 def original_language_exists(teletaskid):
     session = None
     try:
-        session = get_connection()
+        session = get_session()
         count = session.execute(
             select(func.count())
             .select_from(VttFileRecord)
@@ -78,7 +78,7 @@ def save_vtt_as_blob(teletaskid, language, isOriginalLang):
         logger.error(f"TXT file not found, cant put in database: {file_path_txt}", extra={"id": teletaskid})
         return -1
     try:
-        session = get_connection()
+        session = get_session()
 
         with open(file_path, "rb") as f:
             vtt_binary_data = f.read()
@@ -114,7 +114,7 @@ def save_vtt_as_blob(teletaskid, language, isOriginalLang):
 def get_vtt_file_by_id(vtt_file_id) -> VttFile | None:
     session = None
     try:
-        session = get_connection()
+        session = get_session()
         record = session.execute(
             select(VttFileRecord).where(VttFileRecord.id == vtt_file_id)
         ).scalar_one_or_none()
@@ -133,7 +133,7 @@ def get_vtt_file_by_id(vtt_file_id) -> VttFile | None:
 def get_vtt_files_by_lecture_id(lecture_id) -> list[VttFile]:
     session = None
     try:
-        session = get_connection()
+        session = get_session()
         records = session.execute(
             select(VttFileRecord).where(VttFileRecord.lecture_id == lecture_id)
         ).scalars().all()
@@ -149,7 +149,7 @@ def get_vtt_files_by_lecture_id(lecture_id) -> list[VttFile]:
 def get_all_vtt_blobs() -> list[VttFile]:
     session = None
     try:
-        session = get_connection()
+        session = get_session()
         records = session.execute(
             select(VttFileRecord).order_by(VttFileRecord.id)
         ).scalars().all()
@@ -166,7 +166,7 @@ def get_all_vtt_blobs() -> list[VttFile]:
 def get_original_language_by_id(teletaskid):
     session = None
     try:
-        session = get_connection()
+        session = get_session()
         language = session.execute(
             select(VttFileRecord.language).where(
                 VttFileRecord.lecture_id == teletaskid,
@@ -188,7 +188,7 @@ def get_original_language_by_id(teletaskid):
 def get_original_vtt_by_id(teletaskid):
     session = None
     try:
-        session = get_connection()
+        session = get_session()
         vtt_data = session.execute(
             select(VttFileRecord.vtt_data).where(
                 VttFileRecord.lecture_id == teletaskid,
@@ -210,7 +210,7 @@ def get_original_vtt_by_id(teletaskid):
 def getHighestTeletaskID():
     session = None
     try:
-        session = get_connection()
+        session = get_session()
         max_id = session.execute(select(func.max(VttFileRecord.lecture_id))).scalar_one()
         logger.info(f"Highest Teletask ID in available in database: {max_id}")
         return max_id
@@ -224,7 +224,7 @@ def getHighestTeletaskID():
 def getSmallestTeletaskID():
     session = None
     try:
-        session = get_connection()
+        session = get_session()
         min_id = session.execute(select(func.min(VttFileRecord.lecture_id))).scalar_one()
         logger.info(f"Smallest Teletask ID in available in database: {min_id}")
         return min_id
@@ -238,7 +238,7 @@ def getSmallestTeletaskID():
 def get_missing_inbetween_ids():
     session = None
     try:
-        session = get_connection()
+        session = get_session()
         rows = session.execute(
             text(
                 """
@@ -274,7 +274,7 @@ def get_missing_inbetween_ids():
 def get_missing_translations():
     session = None
     try:
-        session = get_connection()
+        session = get_session()
         rows = session.execute(
             select(VttFileRecord.lecture_id, VttFileRecord.language)
             .where(VttFileRecord.is_original_lang.is_(False))

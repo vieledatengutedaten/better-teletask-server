@@ -14,9 +14,9 @@ from models import ApiKey
 
 
 class TestAddApiKey:
-    def test_inserts_correctly(self, patch_get_connection):
+    def test_inserts_correctly(self, patch_get_session):
         """Verify SQLAlchemy executes an INSERT and commits."""
-        session, _ = patch_get_connection
+        session, _ = patch_get_session
 
         from db.api_keys import add_api_key
         add_api_key("testkey123", "Alice", "alice@example.com")
@@ -29,17 +29,17 @@ class TestAddApiKey:
         assert stmt.compile().params["person_email"] == "alice@example.com"
         session.commit.assert_called_once()
 
-    def test_closes_connection_on_success(self, patch_get_connection):
-        session, _ = patch_get_connection
+    def test_closes_connection_on_success(self, patch_get_session):
+        session, _ = patch_get_session
 
         from db.api_keys import add_api_key
         add_api_key("k", "n", "e")
 
         session.close.assert_called_once()
 
-    def test_closes_connection_on_error(self, patch_get_connection):
+    def test_closes_connection_on_error(self, patch_get_session):
         """Even if execute raises, the session should be closed."""
-        session, _ = patch_get_connection
+        session, _ = patch_get_session
         session.execute.side_effect = SQLAlchemyError("DB down")
 
         from db.api_keys import add_api_key
@@ -49,8 +49,8 @@ class TestAddApiKey:
 
 
 class TestGetApiKeyByKey:
-    def test_returns_api_key_when_found(self, patch_get_connection):
-        session, result_proxy = patch_get_connection
+    def test_returns_api_key_when_found(self, patch_get_session):
+        session, result_proxy = patch_get_session
         result_proxy.scalar_one_or_none.return_value = SimpleNamespace(
             id=1,
             api_key="key123",
@@ -70,8 +70,8 @@ class TestGetApiKeyByKey:
         assert result.status == "active"
         session.close.assert_called_once()
 
-    def test_returns_none_when_not_found(self, patch_get_connection):
-        session, result_proxy = patch_get_connection
+    def test_returns_none_when_not_found(self, patch_get_session):
+        session, result_proxy = patch_get_session
         result_proxy.scalar_one_or_none.return_value = None
 
         from db.api_keys import get_api_key_by_key
@@ -82,8 +82,8 @@ class TestGetApiKeyByKey:
 
 
 class TestGetAllApiKeys:
-    def test_returns_list_of_api_keys(self, patch_get_connection):
-        session, result_proxy = patch_get_connection
+    def test_returns_list_of_api_keys(self, patch_get_session):
+        session, result_proxy = patch_get_session
         result_proxy.scalars.return_value.all.return_value = [
             SimpleNamespace(
                 id=1,
@@ -113,8 +113,8 @@ class TestGetAllApiKeys:
         assert result[1].person_name == "Bob"
         session.close.assert_called_once()
 
-    def test_returns_empty_list_when_none(self, patch_get_connection):
-        session, result_proxy = patch_get_connection
+    def test_returns_empty_list_when_none(self, patch_get_session):
+        session, result_proxy = patch_get_session
         result_proxy.scalars.return_value.all.return_value = []
 
         from db.api_keys import get_all_api_keys
@@ -125,8 +125,8 @@ class TestGetAllApiKeys:
 
 
 class TestRemoveApiKey:
-    def test_executes_delete(self, patch_get_connection):
-        session, _ = patch_get_connection
+    def test_executes_delete(self, patch_get_session):
+        session, _ = patch_get_session
 
         from db.api_keys import remove_api_key
         remove_api_key("key_to_delete")

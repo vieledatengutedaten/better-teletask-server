@@ -4,7 +4,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import SQLAlchemyError
 
-from db.connection import get_connection
+from db.connection import get_session
 from db.schema import (
     LectureDataRecord,
     LecturerDataRecord,
@@ -21,7 +21,7 @@ logger = logging.getLogger("btt_root_logger")
 def get_series_of_vtt_file(vtt_file_id) -> SeriesData | None:
     session = None
     try:
-        session = get_connection()
+        session = get_session()
         row = session.execute(
             select(
                 SeriesDataRecord.series_id,
@@ -57,7 +57,7 @@ def get_series_of_vtt_file(vtt_file_id) -> SeriesData | None:
 def get_all_lecture_ids():
     session = None
     try:
-        session = get_connection()
+        session = get_session()
         rows = session.execute(select(LectureDataRecord.lecture_id)).all()
         ids = [row[0] for row in rows]
         logger.debug(f"Fetched all lecture IDs: {ids}")
@@ -73,7 +73,7 @@ def get_all_lecture_ids():
 def series_id_exists(series_id):
     session = None
     try:
-        session = get_connection()
+        session = get_session()
         count = session.execute(
             select(func.count())
             .select_from(SeriesDataRecord)
@@ -91,7 +91,7 @@ def series_id_exists(series_id):
 def lecturer_id_exists(lecturer_id):
     session = None
     try:
-        session = get_connection()
+        session = get_session()
         count = session.execute(
             select(func.count())
             .select_from(LecturerDataRecord)
@@ -109,7 +109,7 @@ def lecturer_id_exists(lecturer_id):
 def add_lecture_data(lecture_data):
     session = None
     try:
-        session = get_connection()
+        session = get_session()
 
         teletaskid = lecture_data["lecture_id"]
         lecturer_ids = lecture_data["lecturer_ids"]
@@ -212,7 +212,7 @@ def add_lecture_data(lecture_data):
 def get_language_of_lecture(teletaskid) -> str:
     session = None
     try:
-        session = get_connection()
+        session = get_session()
         language = session.execute(
             select(LectureDataRecord.language).where(LectureDataRecord.lecture_id == teletaskid)
         ).scalar_one_or_none()
