@@ -34,7 +34,7 @@ logger.debug("base output folder: "+baseoutput)
 def fetchBody(id) -> Response:
     cookies = {"username": USERNAME_COOKIE}
     url = baseurl + id
-    logger.info("requesting "+url, extra={'id': id})
+    logger.debug("requesting "+url, extra={'id': id})
     response = requests.get(url, cookies=cookies, verify='chain.pem')
     response.raise_for_status()
     return response
@@ -63,12 +63,12 @@ def fetchMP4(id, response) -> str:
                 
                     
             else:
-                logger.info("'fallbackStreams' key not found in configuration.", extra={'id': id})
+                logger.debug("'fallbackStreams' key not found in configuration.", extra={'id': id})
         except json.JSONDecodeError:
             logger.error("Configuration attribute is not valid JSON:", extra={'id': id})
             logger.error(config_json, extra={'id': id})
 
-        logger.info("did not find podcast.mp4 in fallbackStreams, trying to fetch .mp4 from streams", extra={'id': id})
+        logger.debug("did not find podcast.mp4 in fallbackStreams, trying to fetch .mp4 from streams", extra={'id': id})
 
         try:
             config = json.loads(config_json)
@@ -105,27 +105,22 @@ def fetchMP4(id, response) -> str:
     logger.error("No mp4 URL found", extra={'id': id})
     return ""
 
-def pingVideoByID(id) -> str:
-    try: 
-        response = fetchBody(id)
-    except HTTPError as e:
-        logger.error(f"Error fetching body: {e}", extra={'id': id})
-        return ""
+def pingVideoByID(id) -> str | None:
+    response = fetchBody(id)
     if(response.status_code == 200):
-        logging.info("Code 200, Video exists", extra={'id': id})
+        logging.info("Received HTTP status 200: Video exists", extra={'id': id})
         return "200"
     elif(response.status_code == 404): # literally does not exist
-        logging.info("Code 404, not available yet", extra={'id': id})
+        logging.info("Received HTTP status 404: Not Found", extra={'id': id})
         return "404"
     elif(response.status_code == 401):
-        logging.info("Code 401, not allowed, please use a session cookie", extra={'id': id})
+        logging.info("Received HTTP status 401: Unauthorized. Check your USERNAME_COOKIE environment variable.", extra={'id': id})
         global USERNAME_COOKIE
         USERNAME_COOKIE = os.environ.get("USERNAME_COOKIE")
         return "401"
     elif(response.status_code == 403): # these can happen randomly
-        logging.info("Code 403, access forbidden", extra={'id': id})
+        logging.info("Received HTTP status 403: Forbidden", extra={'id': id})
         return "403"
-
 
 def get_upper_ids():
     ids = []
@@ -134,15 +129,11 @@ def get_upper_ids():
     if highest is None:
         return ids
     highest = highest + 1
-    for i in range(10):
+    for i in range(7):
         res = pingVideoByID(str(highest + i))
         if res == "200":
             ids.append(highest+i)
-        if res == "401":
-            logger.error("Received 401 Unauthorized. Check your USERNAME_COOKIE environment variable.", extra={'id': highest + i})
-            #need to handle that case, because then we have no cookie
         if res == "403" or res =="404":
-            logger.warning(f"Received {res} for ID {highest + i}.", extra={'id': highest + i})
             unreachable_ids.append(res)
     return ids
     
@@ -185,7 +176,7 @@ def convert_to_mp3(source, out_mp3):
             .global_args('-hide_banner', '-loglevel', 'error')
             .run(capture_stdout=True, capture_stderr=True)
         )
-        logger.info(f'Saved MP3 to {out_mp3}')
+        logger.debug(f'Saved MP3 to {out_mp3}')
     except ffmpeg.Error as e:
         err = e.stderr.decode() if getattr(e, 'stderr', None) else str(e)
         logger.error(f"Failed converting to MP3: {err}")

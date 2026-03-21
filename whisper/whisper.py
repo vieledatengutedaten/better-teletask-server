@@ -36,7 +36,7 @@ def transcribeVideoByID(id) -> str:
     language = None
     try:
         language = get_language_of_lecture(int(id))
-        logger.info(f"Fetched language from database: {language}", extra={'id': id})
+        logger.debug(f"Fetched language from database: {language}", extra={'id': id})
     except Exception as e:
         logger.warning(f"Could not fetch language from database. {e}", extra={'id': id})
 
