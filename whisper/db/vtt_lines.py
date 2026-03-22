@@ -1,8 +1,8 @@
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.exc import SQLAlchemyError
 
 from db.connection import get_session
+from db.error_handling import db_operation
 from db.schema import VttLineRecord
 from models import VttLine, SearchResult
 
@@ -11,13 +11,12 @@ import logging
 logger = logging.getLogger("btt_root_logger")
 
 
+@db_operation(success_message="Successfully bulk inserted {vtt_lines_len} VTT lines.")
 def bulk_insert_vtt_lines(vtt_lines: list[VttLine]):
     if not vtt_lines:
         return
 
-    session = None
-    try:
-        session = get_session()
+    with get_session() as session:
         values = [
             {
                 "vtt_file_id": line.vtt_file_id,
@@ -33,15 +32,7 @@ def bulk_insert_vtt_lines(vtt_lines: list[VttLine]):
         ]
 
         session.execute(pg_insert(VttLineRecord), values)
-        session.commit()
-        logger.info(f"Bulk inserted {len(vtt_lines)} VTT lines.")
-    except SQLAlchemyError as error:
-        logger.error(f"Error while bulk inserting VTT lines: {error}")
-    finally:
-        if session:
-            session.close()
-
-
+@db_operation(success_message="Successfully searched VTT lines.")
 def search_vtt_lines(
     query: str,
     series_id: int | None = None,
@@ -61,10 +52,7 @@ def search_vtt_lines(
         threshold    - minimum similarity score (0-1, lower = more results)
         limit        - max rows returned
     """
-    session = None
-    try:
-        session = get_session()
-
+    with get_session() as session:
         filters = ["similarity(vl.content, :query_where) >= :threshold"]
         params: dict[str, object] = {
             "query_where": query,
@@ -129,9 +117,3 @@ def search_vtt_lines(
             )
             for row in rows
         ]
-    except SQLAlchemyError as error:
-        logger.error(f"Error while searching VTT lines: {error}")
-        return []
-    finally:
-        if session:
-            session.close()

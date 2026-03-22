@@ -8,6 +8,7 @@ Key concepts:
 """
 
 import pytest
+from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 from datetime import datetime, timedelta
 
@@ -60,7 +61,18 @@ def patch_get_session(mock_conn):
         "db.vtt_lines.get_session",
         "db.blacklist.get_session",
     ]
-    patches = [patch(t, return_value=mock_conn) for t in targets]
+    @contextmanager
+    def fake_get_session():
+        try:
+            yield mock_conn
+            mock_conn.commit()
+        except Exception:
+            mock_conn.rollback()
+            raise
+        finally:
+            mock_conn.close()
+
+    patches = [patch(t, side_effect=fake_get_session) for t in targets]
     for p in patches:
         p.start()
     yield mock_conn, mock_conn.execute.return_value

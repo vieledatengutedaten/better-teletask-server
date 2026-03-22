@@ -2,9 +2,9 @@ from datetime import datetime
 
 from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.exc import SQLAlchemyError
 
 from db.connection import get_session
+from db.error_handling import db_operation
 from db.schema import (
     LectureDataRecord,
     LecturerDataRecord,
@@ -18,10 +18,9 @@ import logging
 logger = logging.getLogger("btt_root_logger")
 
 
+@db_operation(success_message="Successfully queried series of VTT file.")
 def get_series_of_vtt_file(vtt_file_id) -> SeriesData | None:
-    session = None
-    try:
-        session = get_session()
+    with get_session() as session:
         row = session.execute(
             select(
                 SeriesDataRecord.series_id,
@@ -46,70 +45,42 @@ def get_series_of_vtt_file(vtt_file_id) -> SeriesData | None:
             )
         logger.info(f"No series found for VTT file ID: {vtt_file_id}")
         return None
-    except SQLAlchemyError as error:
-        logger.error(f"Error while querying PostgreSQL: {error}")
-        return None
-    finally:
-        if session:
-            session.close()
 
 
+@db_operation(success_message="Successfully queried all lecture IDs.")
 def get_all_lecture_ids():
-    session = None
-    try:
-        session = get_session()
+    with get_session() as session:
         rows = session.execute(select(LectureDataRecord.lecture_id)).all()
         ids = [row[0] for row in rows]
         logger.debug(f"Fetched all lecture IDs: {ids}")
         return ids
-    except SQLAlchemyError as error:
-        logger.error(f"Error while querying PostgreSQL: {error}")
-        return []
-    finally:
-        if session:
-            session.close()
 
 
+@db_operation(success_message="Successfully checked whether series ID exists.")
 def series_id_exists(series_id):
-    session = None
-    try:
-        session = get_session()
+    with get_session() as session:
         count = session.execute(
             select(func.count())
             .select_from(SeriesDataRecord)
             .where(SeriesDataRecord.series_id == series_id)
         ).scalar_one()
         return count > 0
-    except SQLAlchemyError as error:
-        logger.error(f"Error while querying PostgreSQL: {error}")
-        return False
-    finally:
-        if session:
-            session.close()
 
 
+@db_operation(success_message="Successfully checked whether lecturer ID exists.")
 def lecturer_id_exists(lecturer_id):
-    session = None
-    try:
-        session = get_session()
+    with get_session() as session:
         count = session.execute(
             select(func.count())
             .select_from(LecturerDataRecord)
             .where(LecturerDataRecord.lecturer_id == lecturer_id)
         ).scalar_one()
         return count > 0
-    except SQLAlchemyError as error:
-        logger.error(f"Error while querying PostgreSQL: {error}")
-        return False
-    finally:
-        if session:
-            session.close()
 
 
+@db_operation(success_message="Successfully added lecture data for Lecture ID {lecture_data[lecture_id]}.")
 def add_lecture_data(lecture_data):
-    session = None
-    try:
-        session = get_session()
+    with get_session() as session:
 
         teletaskid = lecture_data["lecture_id"]
         lecturer_ids = lecture_data["lecturer_ids"]
@@ -144,7 +115,6 @@ def add_lecture_data(lecture_data):
                     f"Added lecturer data for Lecturer ID {lecturer_id}.",
                     extra={"id": teletaskid},
                 )
-                session.commit()
 
         series_exists = session.execute(
             select(func.count())
@@ -164,7 +134,6 @@ def add_lecture_data(lecture_data):
                 f"Added series data for Series ID {series_id}.",
                 extra={"id": teletaskid},
             )
-            session.commit()
         else:
             session.execute(
                 text(
@@ -185,7 +154,6 @@ def add_lecture_data(lecture_data):
                 f"Updated lecturer IDs for Series ID {series_id}.",
                 extra={"id": teletaskid},
             )
-            session.commit()
 
         session.execute(
             pg_insert(LectureDataRecord).values(
@@ -200,19 +168,11 @@ def add_lecture_data(lecture_data):
                 video_mp4=url,
             )
         )
-        session.commit()
-
-    except SQLAlchemyError as error:
-        logger.error(f"Error while connecting to PostgreSQL: {error}")
-    finally:
-        if session:
-            session.close()
 
 
+@db_operation(success_message="Successfully queried lecture language.")
 def get_language_of_lecture(teletaskid) -> str:
-    session = None
-    try:
-        session = get_session()
+    with get_session() as session:
         language = session.execute(
             select(LectureDataRecord.language).where(LectureDataRecord.lecture_id == teletaskid)
         ).scalar_one_or_none()
@@ -221,9 +181,3 @@ def get_language_of_lecture(teletaskid) -> str:
             return language
         logger.info(f"No lecture data found for Teletask ID: {teletaskid}")
         return None
-    except SQLAlchemyError as error:
-        logger.error(f"Error while querying PostgreSQL: {error}")
-        return None
-    finally:
-        if session:
-            session.close()

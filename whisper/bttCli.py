@@ -66,6 +66,7 @@ def handle_api_show(args):
 
 # --- Scrape Commands ---
 
+#TODO wtf is this doing here (i did it myself but still)
 def handle_scrape_missing_lecture_data(args):
     """Fetches and updates missing lecture data."""
     print("\n--- Fetching Missing Lecture Data ---\n")

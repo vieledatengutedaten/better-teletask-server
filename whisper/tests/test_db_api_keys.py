@@ -8,6 +8,7 @@ database logic without a running PostgreSQL instance.
 from datetime import datetime
 from types import SimpleNamespace
 
+import pytest
 from sqlalchemy.exc import SQLAlchemyError
 
 from models import ApiKey
@@ -43,8 +44,10 @@ class TestAddApiKey:
         session.execute.side_effect = SQLAlchemyError("DB down")
 
         from db.api_keys import add_api_key
-        add_api_key("k", "n", "e")
+        with pytest.raises(SQLAlchemyError, match="DB down"):
+            add_api_key("k", "n", "e")
 
+        session.rollback.assert_called_once()
         session.close.assert_called_once()
 
 

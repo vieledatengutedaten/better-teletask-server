@@ -1,3 +1,5 @@
+from contextlib import contextmanager
+from typing import Iterator
 from urllib.parse import quote_plus
 
 from sqlalchemy import create_engine
@@ -19,20 +21,29 @@ DATABASE_URL = _build_database_url()
 
 engine = create_engine(
     DATABASE_URL,
-    pool_pre_ping=True,
+    pool_pre_ping=True, # keep alive ping for idle connections to prevent timeouts and errors
     future=True,
 )
 
 SessionLocal = sessionmaker(
     bind=engine,
-    autoflush=False,
-    autocommit=False,
-    expire_on_commit=False,
+    autoflush=False, # control single operations inside of a transaction manually
+    autocommit=False, # explicitly commit so we can also rollback
+    expire_on_commit=False, # keep ORM objects in memory after commit
     future=True,
 )
 
 
-def get_session() -> Session:
-    """Create and return a new SQLAlchemy session."""
-    return SessionLocal()
+@contextmanager
+def get_session() -> Iterator[Session]:
+    """Yield a SQLAlchemy session with automatic commit/rollback/close."""
+    session = SessionLocal()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
