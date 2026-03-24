@@ -5,6 +5,7 @@ These are Pydantic models — no mocking required.
 Verifies construction, defaults, validation, and basic behavior.
 """
 
+import pytest
 from datetime import date, datetime, timedelta
 from models import (
     SeriesData,
@@ -75,6 +76,9 @@ class TestApiKey:
         assert a != b
 
 
+VALID_VTT = b"WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nHello world\n"
+
+
 class TestVttFile:
     def test_create(self):
         vf = VttFile(
@@ -82,11 +86,55 @@ class TestVttFile:
             lecture_id=11401,
             language="de",
             is_original_lang=True,
-            vtt_data=b"WEBVTT",
+            vtt_data=VALID_VTT,
             txt_data=b"hello",
         )
         assert isinstance(vf.vtt_data, bytes)
         assert vf.asr_model is None
+
+    def test_valid_vtt_passes_validation(self):
+        vf = VttFile(
+            id=1,
+            lecture_id=1,
+            language="en",
+            is_original_lang=True,
+            vtt_data=VALID_VTT,
+            txt_data=b"Hello world",
+        )
+        assert vf.vtt_data == VALID_VTT
+
+    def test_invalid_vtt_raises_validation_error(self):
+        with pytest.raises(Exception, match="not a valid WebVTT"):
+            VttFile(
+                id=1,
+                lecture_id=1,
+                language="en",
+                is_original_lang=True,
+                vtt_data=b"this is not a vtt file",
+                txt_data=b"hello",
+            )
+
+    def test_empty_vtt_raises_validation_error(self):
+        with pytest.raises(Exception):
+            VttFile(
+                id=1,
+                lecture_id=1,
+                language="en",
+                is_original_lang=True,
+                vtt_data=b"",
+                txt_data=b"hello",
+            )
+
+    def test_non_utf8_vtt_raises_validation_error(self):
+        with pytest.raises(Exception):
+            VttFile(
+                id=1,
+                lecture_id=1,
+                language="en",
+                is_original_lang=True,
+                vtt_data=b"\x80\x81\x82",
+                txt_data=b"hello",
+            )
 
 
 class TestVttLine:

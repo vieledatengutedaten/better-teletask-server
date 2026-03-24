@@ -1,7 +1,9 @@
 from datetime import date as dt_date, datetime as dt_datetime, timedelta as dt_timedelta
 from typing import Optional
 
-from pydantic import BaseModel
+
+import webvtt
+from pydantic import BaseModel, field_validator
 
 
 class SeriesData(BaseModel):
@@ -39,6 +41,15 @@ class VttFile(BaseModel):
     asr_model: Optional[str] = None
     compute_type: Optional[str] = None
     creation_date: Optional[dt_datetime] = None
+
+    @field_validator("vtt_data")
+    @classmethod
+    def vtt_data_must_be_parseable(cls, v: bytes) -> bytes:
+        try:
+            webvtt.from_string(v.decode("utf-8"))
+        except Exception as e:
+            raise ValueError(f"vtt_data is not a valid WebVTT file: {e}")
+        return v
 
 
 class VttLine(BaseModel):
