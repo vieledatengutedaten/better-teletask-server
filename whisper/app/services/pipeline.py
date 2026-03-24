@@ -9,9 +9,10 @@ from app.db.vtt_files import save_vtt_as_blob
 
 from requests.models import HTTPError
 
+
 def transcribePipelineVideoByID(id):
     # lazyload whisper here to avoid the annoying waiting time
-    from services.whisper_asr import transcribeVideoByID
+    from app.services.whisper_asr import transcribeVideoByID
 
     url = fetchLecture(str(id))
 
@@ -25,7 +26,9 @@ def transcribePipelineVideoByID(id):
             )
             convert_to_mp3(url, INPUT_PATH + str(id) + ".mp3")
         except Exception as e:
-            logging.info("Trying to download mp4 and convert locally", extra={"id": id})
+            logging.error(
+                f"Trying to download mp4 and convert locally: {e}", extra={"id": id}
+            )
             try:
                 downloadMP4(url, id)
                 convert_to_mp3(

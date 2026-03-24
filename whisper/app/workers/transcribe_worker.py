@@ -52,7 +52,7 @@ async def get_id_for_worker() -> Optional[int]:
     else:
         return None
 
-
+# i was on crack when writing this TODO
 async def remove_id_from_in_process(id: int):
     """Remove an ID from the in-process queue after timeout."""
     logger.debug(f"ID {id} will be removed from in-process queue after timeout.")
