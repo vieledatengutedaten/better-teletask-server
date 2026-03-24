@@ -16,7 +16,9 @@ from services.translation import (
 
 class TestParseVttBlocks:
     def test_separates_header_and_blocks(self):
-        raw = "WEBVTT\n\n00:01.000 --> 00:05.000\nHello\n\n00:06.000 --> 00:10.000\nWorld"
+        raw = (
+            "WEBVTT\n\n00:01.000 --> 00:05.000\nHello\n\n00:06.000 --> 00:10.000\nWorld"
+        )
         header, blocks = parse_vtt_blocks(raw)
         assert header == "WEBVTT"
         assert len(blocks) == 2

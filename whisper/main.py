@@ -6,6 +6,7 @@ from fastapi import FastAPI
 # setup logging — must be imported before other modules to configure handlers
 import logger
 import logging
+
 logger = logging.getLogger("btt_root_logger")
 
 from db.migrations import initDatabase
@@ -13,10 +14,16 @@ from db.vtt_files import getSmallestTeletaskID
 from db.blacklist import get_missing_available_inbetween_ids
 from services.scraper import get_upper_ids
 from workers.queues import (
-    prio_queue, forward_queue, in_between_queue, backward_queue,
+    prio_queue,
+    forward_queue,
+    in_between_queue,
+    backward_queue,
 )
 from workers.transcribe_worker import transcribe_worker
-from workers.queue_updaters import update_upper_ids_periodically, update_inbetween_ids_periodically
+from workers.queue_updaters import (
+    update_upper_ids_periodically,
+    update_inbetween_ids_periodically,
+)
 from api.scheduling_routes import schedule_router
 
 

@@ -5,12 +5,17 @@ from db.vtt_files import original_language_exists
 from services.scraper import pingVideoByID
 from services.pipeline import transcribePipelineVideoByID
 from workers.queues import (
-    prio_queue, forward_queue, in_between_queue, backward_queue,
-    in_process_queue, multi_lock,
+    prio_queue,
+    forward_queue,
+    in_between_queue,
+    backward_queue,
+    in_process_queue,
+    multi_lock,
 )
 
 import logger
 import logging
+
 logger = logging.getLogger("btt_root_logger")
 
 
@@ -18,7 +23,9 @@ async def get_id_for_worker() -> Optional[int]:
     """Get the next ID to process from the queues in order of priority."""
     logger.info("Getting ID for worker...")
     id = None
-    async with multi_lock([prio_queue, forward_queue, in_between_queue, backward_queue]):
+    async with multi_lock(
+        [prio_queue, forward_queue, in_between_queue, backward_queue]
+    ):
         logger.debug("Got locks for all queues")
         if await prio_queue.peek_unlocked() is not None:
             id = await prio_queue.dequeue_unlocked()
@@ -38,7 +45,9 @@ async def get_id_for_worker() -> Optional[int]:
             logger.info(f"ID {id} already has original language, skipping.")
             return await get_id_for_worker()
         elif res == "200":
-            logger.info(f"Fetched ID {id} from queue and it is available for processing, starting worker")
+            logger.info(
+                f"Fetched ID {id} from queue and it is available for processing, starting worker"
+            )
             await in_process_queue.add_unlocked(id)
             asyncio.create_task(remove_id_from_in_process(id))
             return id
@@ -73,5 +82,7 @@ async def transcribe_worker():
             except Exception as e:
                 logger.error(f"Transcription failed for ID {id}: {e}")
         else:
-            logger.info(f"No IDs available to transcribe, waiting {sleep_time} seconds...")
+            logger.info(
+                f"No IDs available to transcribe, waiting {sleep_time} seconds..."
+            )
             await asyncio.sleep(sleep_time)

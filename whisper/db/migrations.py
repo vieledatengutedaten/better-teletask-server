@@ -6,6 +6,7 @@ from db.schema import Base
 
 import logger
 import logging
+
 logger = logging.getLogger("btt_root_logger")
 
 

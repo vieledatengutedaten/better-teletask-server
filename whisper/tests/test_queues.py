@@ -1,7 +1,7 @@
 """
 Tests for workers/queues.py — AsyncQueue
 
-AsyncQueue is a pure in-memory async data structure with no external 
+AsyncQueue is a pure in-memory async data structure with no external
 dependencies, so it can be tested directly without mocking.
 """
 

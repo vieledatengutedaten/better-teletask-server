@@ -69,8 +69,15 @@ class TestPrioritize:
     @patch("api.scheduling_routes.prio_queue")
     @patch("api.scheduling_routes.pingVideoByID", return_value="200")
     def test_prioritize_available_id(
-        self, mock_ping, mock_prio, mock_fwd, mock_inb, mock_bwd, mock_inp,
-        mock_multi_lock, client
+        self,
+        mock_ping,
+        mock_prio,
+        mock_fwd,
+        mock_inb,
+        mock_bwd,
+        mock_inp,
+        mock_multi_lock,
+        client,
     ):
         # Setup: ID is not in any queue
         mock_inp.contains_unlocked = AsyncMock(return_value=False)

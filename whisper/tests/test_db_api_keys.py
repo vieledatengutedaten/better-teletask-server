@@ -20,6 +20,7 @@ class TestAddApiKey:
         session, _ = patch_get_session
 
         from db.api_keys import add_api_key
+
         add_api_key("testkey123", "Alice", "alice@example.com")
 
         session.execute.assert_called_once()
@@ -34,6 +35,7 @@ class TestAddApiKey:
         session, _ = patch_get_session
 
         from db.api_keys import add_api_key
+
         add_api_key("k", "n", "e")
 
         session.close.assert_called_once()
@@ -44,6 +46,7 @@ class TestAddApiKey:
         session.execute.side_effect = SQLAlchemyError("DB down")
 
         from db.api_keys import add_api_key
+
         with pytest.raises(SQLAlchemyError, match="DB down"):
             add_api_key("k", "n", "e")
 
@@ -65,6 +68,7 @@ class TestGetApiKeyByKey:
         )
 
         from db.api_keys import get_api_key_by_key
+
         result = get_api_key_by_key("key123")
 
         assert isinstance(result, ApiKey)
@@ -78,6 +82,7 @@ class TestGetApiKeyByKey:
         result_proxy.scalar_one_or_none.return_value = None
 
         from db.api_keys import get_api_key_by_key
+
         result = get_api_key_by_key("nonexistent")
 
         assert result is None
@@ -109,6 +114,7 @@ class TestGetAllApiKeys:
         ]
 
         from db.api_keys import get_all_api_keys
+
         result = get_all_api_keys()
 
         assert len(result) == 2
@@ -121,6 +127,7 @@ class TestGetAllApiKeys:
         result_proxy.scalars.return_value.all.return_value = []
 
         from db.api_keys import get_all_api_keys
+
         result = get_all_api_keys()
 
         assert result == []
@@ -132,6 +139,7 @@ class TestRemoveApiKey:
         session, _ = patch_get_session
 
         from db.api_keys import remove_api_key
+
         remove_api_key("key_to_delete")
 
         session.execute.assert_called_once()

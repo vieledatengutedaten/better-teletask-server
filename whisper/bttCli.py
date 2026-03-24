@@ -1,4 +1,10 @@
-from db.api_keys import add_api_key, remove_api_key, get_all_api_keys, get_api_key_by_name, get_api_key_by_key
+from db.api_keys import (
+    add_api_key,
+    remove_api_key,
+    get_all_api_keys,
+    get_api_key_by_name,
+    get_api_key_by_key,
+)
 from db.vtt_files import getHighestTeletaskID, get_all_original_vtt_ids
 from db.lectures import get_all_lecture_ids
 from services.scraper import getLecturerData, fetchBody, pingVideoByID
@@ -8,8 +14,8 @@ import hashlib
 import argparse
 import os
 
-
 # --- API Management Commands ---
+
 
 def handle_api_add(args):
     """Add a new API key."""
@@ -45,20 +51,26 @@ def handle_api_show(args):
         keys = get_all_api_keys()
         if keys:
             for key in keys:
-                print(f"- Key: {key.api_key}, Name: {key.person_name}, Email: {key.person_email}")
+                print(
+                    f"- Key: {key.api_key}, Name: {key.person_name}, Email: {key.person_email}"
+                )
         else:
             print("No API keys found.")
     elif args.key:
         print(f"Looking up by API key: {args.key}\n")
         key_info = get_api_key_by_key(args.key)
         if key_info:
-            print(f"- Key: {key_info.api_key}, Name: {key_info.person_name}, Email: {key_info.person_email}")
+            print(
+                f"- Key: {key_info.api_key}, Name: {key_info.person_name}, Email: {key_info.person_email}"
+            )
     elif args.name:
         print(f"Looking up by name: {args.name}\n")
         keys = get_api_key_by_name(args.name)
         if keys:
             for key in keys:
-                print(f"- Key: {key.api_key}, Name: {key.person_name}, Email: {key.person_email}")
+                print(
+                    f"- Key: {key.api_key}, Name: {key.person_name}, Email: {key.person_email}"
+                )
     else:
         print("Please specify --all, --key, or --name")
     print()
@@ -66,7 +78,8 @@ def handle_api_show(args):
 
 # --- Scrape Commands ---
 
-#TODO wtf is this doing here (i did it myself but still)
+
+# TODO wtf is this doing here (i did it myself but still)
 def handle_scrape_missing_lecture_data(args):
     """Fetches and updates missing lecture data."""
     print("\n--- Fetching Missing Lecture Data ---\n")
@@ -76,7 +89,9 @@ def handle_scrape_missing_lecture_data(args):
 
     missing_lecturer_data_ids = all_vtt_ids - all_lecture_ids
 
-    print(f"Found {len(missing_lecturer_data_ids)} lectures with missing lecturer data.")
+    print(
+        f"Found {len(missing_lecturer_data_ids)} lectures with missing lecturer data."
+    )
 
     if not missing_lecturer_data_ids:
         print("No missing lecture data to fetch.\n")
@@ -147,77 +162,84 @@ def main():
     parser = argparse.ArgumentParser(
         description="Better Teletask CLI - Manage API keys and scrape lecture data.",
         epilog="Examples:\n"
-               "  python -m cli.bttCli api add 'Crisitan' 'conzz@culator.zaza'\n"
-               "  python -m cli.bttCli api show --all\n"
-               "  python -m cli.bttCli api show --key 'your_api_key'\n"
-               "  python -m cli.bttCli api show --name 'Crisitan'\n"
-               "  python -m cli.bttCli scrape idstatus --count 20\n",
-        formatter_class=argparse.RawDescriptionHelpFormatter
+        "  python -m cli.bttCli api add 'Crisitan' 'conzz@culator.zaza'\n"
+        "  python -m cli.bttCli api show --all\n"
+        "  python -m cli.bttCli api show --key 'your_api_key'\n"
+        "  python -m cli.bttCli api show --name 'Crisitan'\n"
+        "  python -m cli.bttCli scrape idstatus --count 20\n",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
     subparsers = parser.add_subparsers(
-        title='Command Groups',
-        required=True,
-        dest='group'
+        title="Command Groups", required=True, dest="group"
     )
 
     # ====================
     # API Command Group
     # ====================
-    api_parser = subparsers.add_parser('api', help='Manage API keys')
+    api_parser = subparsers.add_parser("api", help="Manage API keys")
     api_subparsers = api_parser.add_subparsers(
-        title='API Commands',
-        required=True,
-        dest='api_command'
+        title="API Commands", required=True, dest="api_command"
     )
 
     # api add
-    add_parser = api_subparsers.add_parser('add', help='Add a new API key for a user by username and email')
-    add_parser.add_argument('name', type=str, help='The user name')
-    add_parser.add_argument('email', type=str, help='The user email')
+    add_parser = api_subparsers.add_parser(
+        "add", help="Add a new API key for a user by username and email"
+    )
+    add_parser.add_argument("name", type=str, help="The user name")
+    add_parser.add_argument("email", type=str, help="The user email")
     add_parser.set_defaults(func=handle_api_add)
 
     # api remove
-    remove_parser = api_subparsers.add_parser('remove', help='Remove a user/key by key')
-    remove_parser.add_argument('key', type=str, help='The API key string to remove')
+    remove_parser = api_subparsers.add_parser("remove", help="Remove a user/key by key")
+    remove_parser.add_argument("key", type=str, help="The API key string to remove")
     remove_parser.set_defaults(func=handle_api_remove)
 
     # api show
-    show_parser = api_subparsers.add_parser('show', help='Show API key details')
+    show_parser = api_subparsers.add_parser("show", help="Show API key details")
     show_group = show_parser.add_mutually_exclusive_group(required=True)
-    show_group.add_argument('--all', action='store_true', help='Show all API keys')
-    show_group.add_argument('--key', type=str, help='Show API key by key value')
-    show_group.add_argument('--name', type=str, help='Show API key(s) by person name')
+    show_group.add_argument("--all", action="store_true", help="Show all API keys")
+    show_group.add_argument("--key", type=str, help="Show API key by key value")
+    show_group.add_argument("--name", type=str, help="Show API key(s) by person name")
     show_parser.set_defaults(func=handle_api_show)
 
     # ====================
     # Scrape Command Group
     # ====================
-    scrape_parser = subparsers.add_parser('scrape', help='Scrape and check lecture data')
+    scrape_parser = subparsers.add_parser(
+        "scrape", help="Scrape and check lecture data"
+    )
     scrape_subparsers = scrape_parser.add_subparsers(
-        title='Scrape Commands',
-        required=True,
-        dest='scrape_command'
+        title="Scrape Commands", required=True, dest="scrape_command"
     )
 
     # scrape idstatus
-    idstatus_parser = scrape_subparsers.add_parser('idstatus', help='Check status of video IDs')
-    idstatus_parser.add_argument('--start', type=int, help='Starting ID (default: highest in DB)')
-    idstatus_parser.add_argument('--count', type=int, default=10, help='Number of IDs to check (default: 10)')
+    idstatus_parser = scrape_subparsers.add_parser(
+        "idstatus", help="Check status of video IDs"
+    )
+    idstatus_parser.add_argument(
+        "--start", type=int, help="Starting ID (default: highest in DB)"
+    )
+    idstatus_parser.add_argument(
+        "--count", type=int, default=10, help="Number of IDs to check (default: 10)"
+    )
     idstatus_parser.set_defaults(func=handle_scrape_idstatus)
 
     # scrape missing_lecture_data
-    missing_lecture_data_parser = scrape_subparsers.add_parser('lecturedata', help='Fetch missing lecture data for lectures with original VTTs but no lecturer data')
+    missing_lecture_data_parser = scrape_subparsers.add_parser(
+        "lecturedata",
+        help="Fetch missing lecture data for lectures with original VTTs but no lecturer data",
+    )
     missing_lecture_data_parser.set_defaults(func=handle_scrape_missing_lecture_data)
 
     # Parse and execute
     args = parser.parse_args()
 
-    if hasattr(args, 'func'):
+    if hasattr(args, "func"):
         args.func(args)
     else:
         parser.print_help()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -99,7 +99,7 @@ class AsyncQueue:
 
 
 @contextlib.asynccontextmanager
-async def multi_lock(queues: List['AsyncQueue']):
+async def multi_lock(queues: List["AsyncQueue"]):
     """Acquire multiple AsyncQueue locks safely, avoiding deadlocks."""
     sorted_queues = sorted(queues, key=id)
     acquired_locks = []

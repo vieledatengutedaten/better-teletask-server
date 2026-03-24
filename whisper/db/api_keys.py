@@ -8,6 +8,7 @@ from models import ApiKey
 
 import logger
 import logging
+
 logger = logging.getLogger("btt_root_logger")
 
 
@@ -50,9 +51,13 @@ def get_api_key_by_key(api_key) -> ApiKey | None:
 @db_operation(success_message="Successfully queried API keys by person name.")
 def get_api_key_by_name(person_name) -> list[ApiKey] | None:
     with get_session() as session:
-        records = session.execute(
-            select(ApiKeyRecord).where(ApiKeyRecord.person_name == person_name)
-        ).scalars().all()
+        records = (
+            session.execute(
+                select(ApiKeyRecord).where(ApiKeyRecord.person_name == person_name)
+            )
+            .scalars()
+            .all()
+        )
 
         api_keys = [_to_api_key(record) for record in records]
         if api_keys:
@@ -71,6 +76,4 @@ def get_all_api_keys() -> list[ApiKey]:
 @db_operation(success_message="Successfully removed API key: {api_key}")
 def remove_api_key(api_key):
     with get_session() as session:
-        session.execute(
-            delete(ApiKeyRecord).where(ApiKeyRecord.api_key == api_key)
-        )
+        session.execute(delete(ApiKeyRecord).where(ApiKeyRecord.api_key == api_key))

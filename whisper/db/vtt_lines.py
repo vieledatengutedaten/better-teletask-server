@@ -8,6 +8,7 @@ from models import VttLine, SearchResult
 
 import logger
 import logging
+
 logger = logging.getLogger("btt_root_logger")
 
 
@@ -32,6 +33,8 @@ def bulk_insert_vtt_lines(vtt_lines: list[VttLine]):
         ]
 
         session.execute(pg_insert(VttLineRecord), values)
+
+
 @db_operation(success_message="Successfully searched VTT lines.")
 def search_vtt_lines(
     query: str,
@@ -78,8 +81,7 @@ def search_vtt_lines(
             params["lecture_id"] = lecture_id
 
         where_clause = " AND ".join(filters)
-        sql = text(
-            f"""
+        sql = text(f"""
             SELECT
                 vl.vtt_file_id,
                 vf.lecture_id,
@@ -97,8 +99,7 @@ def search_vtt_lines(
             WHERE {where_clause}
             ORDER BY similarity DESC
             LIMIT :limit
-            """
-        )
+            """)
 
         rows = session.execute(sql, params).all()
 

@@ -8,10 +8,13 @@ from db.vtt_files import get_missing_inbetween_ids
 
 import logger
 import logging
+
 logger = logging.getLogger("btt_root_logger")
 
 
-@db_operation(success_message="Successfully added Teletask ID {teletaskid} to blacklist.")
+@db_operation(
+    success_message="Successfully added Teletask ID {teletaskid} to blacklist."
+)
 def add_id_to_blacklist(teletaskid, reason):
     with get_session() as session:
         insert_stmt = pg_insert(BlacklistIdRecord).values(

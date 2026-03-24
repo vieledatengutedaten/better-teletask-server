@@ -15,6 +15,7 @@ from models import SeriesData
 
 import logger
 import logging
+
 logger = logging.getLogger("btt_root_logger")
 
 
@@ -78,7 +79,9 @@ def lecturer_id_exists(lecturer_id):
         return count > 0
 
 
-@db_operation(success_message="Successfully added lecture data for Lecture ID {lecture_data[lecture_id]}.")
+@db_operation(
+    success_message="Successfully added lecture data for Lecture ID {lecture_data[lecture_id]}."
+)
 def add_lecture_data(lecture_data):
     with get_session() as session:
 
@@ -109,7 +112,9 @@ def add_lecture_data(lecture_data):
                     lecturer_id=lecturer_id,
                     lecturer_name=lecturer_name,
                 )
-                stmt = stmt.on_conflict_do_nothing(index_elements=[LecturerDataRecord.lecturer_id])
+                stmt = stmt.on_conflict_do_nothing(
+                    index_elements=[LecturerDataRecord.lecturer_id]
+                )
                 session.execute(stmt)
                 logger.info(
                     f"Added lecturer data for Lecturer ID {lecturer_id}.",
@@ -128,7 +133,9 @@ def add_lecture_data(lecture_data):
                 series_name=series_name,
                 lecturer_ids=lecturer_ids,
             )
-            stmt = stmt.on_conflict_do_nothing(index_elements=[SeriesDataRecord.series_id])
+            stmt = stmt.on_conflict_do_nothing(
+                index_elements=[SeriesDataRecord.series_id]
+            )
             session.execute(stmt)
             logger.info(
                 f"Added series data for Series ID {series_id}.",
@@ -136,15 +143,13 @@ def add_lecture_data(lecture_data):
             )
         else:
             session.execute(
-                text(
-                    """
+                text("""
                     UPDATE series_data
                     SET lecturer_ids = array(
                         SELECT DISTINCT unnest(lecturer_ids || CAST(:lecturer_ids AS INTEGER[]))
                     )
                     WHERE series_id = :series_id;
-                    """
-                ),
+                    """),
                 {
                     "lecturer_ids": lecturer_ids,
                     "series_id": series_id,
@@ -174,7 +179,9 @@ def add_lecture_data(lecture_data):
 def get_language_of_lecture(teletaskid) -> str:
     with get_session() as session:
         language = session.execute(
-            select(LectureDataRecord.language).where(LectureDataRecord.lecture_id == teletaskid)
+            select(LectureDataRecord.language).where(
+                LectureDataRecord.lecture_id == teletaskid
+            )
         ).scalar_one_or_none()
 
         if language:

@@ -12,10 +12,10 @@ from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 from datetime import datetime, timedelta
 
-
 # ---------------------------------------------------------------------------
 # Database fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def mock_result():
@@ -61,6 +61,7 @@ def patch_get_session(mock_conn):
         "db.vtt_lines.get_session",
         "db.blacklist.get_session",
     ]
+
     @contextmanager
     def fake_get_session():
         try:
@@ -83,6 +84,7 @@ def patch_get_session(mock_conn):
 # ---------------------------------------------------------------------------
 # Model factory helpers
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def sample_api_key():

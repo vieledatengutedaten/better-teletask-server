@@ -6,19 +6,20 @@ from models import VttFile, VttLine
 
 import logger
 import logging
+
 logger = logging.getLogger("btt_root_logger")
 
 
 # HH:MM:SS.mmm
 def timestamp_to_ms(timestamp: str) -> int:
-    parts = timestamp.split(':')
+    parts = timestamp.split(":")
     if len(parts) == 3:
         h, m, rest = parts
     else:
         h = 0
         m = parts[0]
         rest = parts[1]
-    s, ms = rest.split('.')
+    s, ms = rest.split(".")
     total_ms = (int(h) * 3600 + int(m) * 60 + int(s)) * 1000 + int(ms)
     return total_ms
 
@@ -33,7 +34,7 @@ def save_vtt_lines(vtt_id: int):
         return
 
     vtt_lines: list[VttLine] = []
-    for i, caption in enumerate(webvtt.from_string(vtt_file.vtt_data.decode('utf-8'))):
+    for i, caption in enumerate(webvtt.from_string(vtt_file.vtt_data.decode("utf-8"))):
         line = VttLine(
             id=None,
             vtt_file_id=vtt_file.id,
@@ -43,7 +44,7 @@ def save_vtt_lines(vtt_id: int):
             line_number=i + 1,
             ts_start=timestamp_to_ms(caption.start),
             ts_end=timestamp_to_ms(caption.end),
-            content=caption.text
+            content=caption.text,
         )
         vtt_lines.append(line)
 

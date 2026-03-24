@@ -12,7 +12,9 @@ R = TypeVar("R")
 SuccessMessage = str | Callable[[tuple[Any, ...], dict[str, Any], Any], str]
 
 
-def db_operation(success_message: SuccessMessage | None = None) -> Callable[[Callable[P, R]], Callable[P, R]]:
+def db_operation(
+    success_message: SuccessMessage | None = None,
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Wrap database functions with consistent success/failure logging.
 
     - On success: logs `success_message` if provided.
@@ -31,7 +33,9 @@ def db_operation(success_message: SuccessMessage | None = None) -> Callable[[Cal
                     message = (
                         success_message(args, kwargs, result)
                         if callable(success_message)
-                        else _format_success_message(function, args, kwargs, result, success_message)
+                        else _format_success_message(
+                            function, args, kwargs, result, success_message
+                        )
                     )
                     logger.info(message)
                 return result

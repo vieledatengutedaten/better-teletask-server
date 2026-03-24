@@ -19,33 +19,42 @@ def transcribePipelineVideoByID(id):
     url = fetchLecture(str(id))
 
     if url == "":
-        logging.error("No mp4 URL found, cannot transcribe", extra={'id': id})
+        logging.error("No mp4 URL found, cannot transcribe", extra={"id": id})
         return -1
     else:
         try:
-            logging.info(f"Trying to directly convert to mp3 from URL: {url}", extra={'id': id})
+            logging.info(
+                f"Trying to directly convert to mp3 from URL: {url}", extra={"id": id}
+            )
             convert_to_mp3(url, INPUT_PATH + str(id) + ".mp3")
         except Exception as e:
-            logging.info("Trying to download mp4 and convert locally", extra={'id': id})
+            logging.info("Trying to download mp4 and convert locally", extra={"id": id})
             try:
                 downloadMP4(url, id)
-                convert_to_mp3(INPUT_PATH + str(id) + ".mp4", INPUT_PATH + str(id) + ".mp3")
+                convert_to_mp3(
+                    INPUT_PATH + str(id) + ".mp4", INPUT_PATH + str(id) + ".mp3"
+                )
             except Exception as e2:
-                logger.error(f"Could not convert video to mp3, aborting transcribtion for this lecture.", extra={'id': id})
+                logger.error(
+                    f"Could not convert video to mp3, aborting transcribtion for this lecture.",
+                    extra={"id": id},
+                )
                 return -1
 
         try:
             language = transcribeVideoByID(str(id))
         except FileNotFoundError as e:
-            logger.error(f"ERROR: Could not transcribe video {e}.", extra={'id': id})
+            logger.error(f"ERROR: Could not transcribe video {e}.", extra={"id": id})
             return -1
 
         try:
             save_vtt_as_blob(id, language, True)
         except Exception as e:
-            logger.error(f"Could not save VTT to database {e}.", extra={'id': id})
+            logger.error(f"Could not save VTT to database {e}.", extra={"id": id})
             return -1
 
-        logger.info(f"ID: {id} Transcription and saving completed successfully, removing source files.")
+        logger.info(
+            f"ID: {id} Transcription and saving completed successfully, removing source files."
+        )
         remove_all_id_files(id)
         return 0

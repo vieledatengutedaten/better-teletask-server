@@ -81,4 +81,3 @@ class SearchResult(BaseModel):
     ts_end: int
     content: str
     similarity: float
-

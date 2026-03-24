@@ -21,15 +21,15 @@ DATABASE_URL = _build_database_url()
 
 engine = create_engine(
     DATABASE_URL,
-    pool_pre_ping=True, # keep alive ping for idle connections to prevent timeouts and errors
+    pool_pre_ping=True,  # keep alive ping for idle connections to prevent timeouts and errors
     future=True,
 )
 
 SessionLocal = sessionmaker(
     bind=engine,
-    autoflush=False, # control single operations inside of a transaction manually
-    autocommit=False, # explicitly commit so we can also rollback
-    expire_on_commit=False, # keep ORM objects in memory after commit
+    autoflush=False,  # control single operations inside of a transaction manually
+    autocommit=False,  # explicitly commit so we can also rollback
+    expire_on_commit=False,  # keep ORM objects in memory after commit
     future=True,
 )
 
@@ -46,4 +46,3 @@ def get_session() -> Iterator[Session]:
         raise
     finally:
         session.close()
-

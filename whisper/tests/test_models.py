@@ -7,8 +7,14 @@ Verifies construction, defaults, validation, and basic behavior.
 
 from datetime import date, datetime, timedelta
 from models import (
-    SeriesData, LecturerData, LectureData,
-    VttFile, VttLine, ApiKey, BlacklistEntry, SearchResult,
+    SeriesData,
+    LecturerData,
+    LectureData,
+    VttFile,
+    VttLine,
+    ApiKey,
+    BlacklistEntry,
+    SearchResult,
 )
 
 
@@ -72,8 +78,12 @@ class TestApiKey:
 class TestVttFile:
     def test_create(self):
         vf = VttFile(
-            id=1, lecture_id=11401, language="de",
-            is_original_lang=True, vtt_data=b"WEBVTT", txt_data=b"hello"
+            id=1,
+            lecture_id=11401,
+            language="de",
+            is_original_lang=True,
+            vtt_data=b"WEBVTT",
+            txt_data=b"hello",
         )
         assert isinstance(vf.vtt_data, bytes)
         assert vf.asr_model is None
@@ -82,10 +92,15 @@ class TestVttFile:
 class TestVttLine:
     def test_create(self):
         vl = VttLine(
-            id=1, vtt_file_id=1, series_id=42,
-            language="de", lecturer_ids=[1],
-            line_number=1, ts_start=0, ts_end=5000,
-            content="Hello world"
+            id=1,
+            vtt_file_id=1,
+            series_id=42,
+            language="de",
+            lecturer_ids=[1],
+            line_number=1,
+            ts_start=0,
+            ts_end=5000,
+            content="Hello world",
         )
         assert vl.ts_end - vl.ts_start == 5000
 
@@ -93,10 +108,16 @@ class TestVttLine:
 class TestSearchResult:
     def test_similarity_range(self):
         sr = SearchResult(
-            vtt_file_id=1, lecture_id=11401, series_id=42,
-            series_name="Test", language="de",
-            line_number=1, ts_start=0, ts_end=5000,
-            content="Hello", similarity=0.85
+            vtt_file_id=1,
+            lecture_id=11401,
+            series_id=42,
+            series_name="Test",
+            language="de",
+            line_number=1,
+            ts_start=0,
+            ts_end=5000,
+            content="Hello",
+            similarity=0.85,
         )
         assert 0.0 <= sr.similarity <= 1.0
 

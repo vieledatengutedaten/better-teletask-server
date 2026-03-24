@@ -12,23 +12,23 @@ logger = logging.getLogger("btt_root_logger")
 
 def downloadMP4(url, id):
     try:
-        mp4_response = requests.get(url, stream=True, verify='chain.pem')
+        mp4_response = requests.get(url, stream=True, verify="chain.pem")
         mp4_response.raise_for_status()
-        total_size = int(mp4_response.headers.get('content-length', 0))
+        total_size = int(mp4_response.headers.get("content-length", 0))
         dest = INPUT_PATH + str(id) + ".mp4"
         with open(dest, "wb") as f, tqdm(
             desc="Downloading " + dest,
             total=total_size,
-            unit='B',
+            unit="B",
             unit_scale=True,
             unit_divisor=1024,
         ) as bar:
             for chunk in mp4_response.iter_content(chunk_size=8192):
                 f.write(chunk)
                 bar.update(len(chunk))
-        logging.info("Download complete:" + dest, extra={'id': id})
+        logging.info("Download complete:" + dest, extra={"id": id})
     except Exception as e:
-        logging.error(f"Error downloading mp4: {e}", extra={'id': id})
+        logging.error(f"Error downloading mp4: {e}", extra={"id": id})
         raise
 
 
@@ -37,20 +37,14 @@ def convert_to_mp3(source, out_mp3):
     try:
         (
             ffmpeg.input(source)
-            .output(
-                out_mp3,
-                format='mp3',
-                acodec='libmp3lame',
-                **{"q:a": 2},
-                vn=None
-            )
+            .output(out_mp3, format="mp3", acodec="libmp3lame", **{"q:a": 2}, vn=None)
             .overwrite_output()
-            .global_args('-hide_banner', '-loglevel', 'error')
+            .global_args("-hide_banner", "-loglevel", "error")
             .run(capture_stdout=True, capture_stderr=True)
         )
-        logger.info(f'Saved MP3 to {out_mp3}')
+        logger.info(f"Saved MP3 to {out_mp3}")
     except ffmpeg.Error as e:
-        err = e.stderr.decode() if getattr(e, 'stderr', None) else str(e)
+        err = e.stderr.decode() if getattr(e, "stderr", None) else str(e)
         logger.error(f"Failed converting to MP3: {err}")
         raise
 

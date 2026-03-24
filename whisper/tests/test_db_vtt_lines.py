@@ -18,10 +18,10 @@ import pytest
 
 from models import SearchResult
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_row(
     vtt_file_id=1,
@@ -37,22 +37,31 @@ def _make_row(
 ):
     """Return a tuple that mimics a raw DB row from the search query."""
     return (
-        vtt_file_id, lecture_id, series_id, series_name,
-        language, line_number, ts_start, ts_end, content, similarity,
+        vtt_file_id,
+        lecture_id,
+        series_id,
+        series_name,
+        language,
+        line_number,
+        ts_start,
+        ts_end,
+        content,
+        similarity,
     )
 
 
 def _get_sql_and_params(mock_session):
     """Extract the SQL string and params dict from the session.execute call."""
     call_args = mock_session.execute.call_args
-    sql_text = call_args[0][0]          # first positional arg: text() object
-    params = call_args[0][1]            # second positional arg: params dict
+    sql_text = call_args[0][0]  # first positional arg: text() object
+    params = call_args[0][1]  # second positional arg: params dict
     return str(sql_text), params
 
 
 # ---------------------------------------------------------------------------
 # Tests: result mapping
 # ---------------------------------------------------------------------------
+
 
 class TestSearchResultMapping:
     """Verify that raw DB rows are correctly mapped to SearchResult objects."""
@@ -62,6 +71,7 @@ class TestSearchResultMapping:
         result_proxy.all.return_value = [_make_row()]
 
         from db.vtt_lines import search_vtt_lines
+
         results = search_vtt_lines("Hallo")
 
         assert len(results) == 1
@@ -87,6 +97,7 @@ class TestSearchResultMapping:
         ]
 
         from db.vtt_lines import search_vtt_lines
+
         results = search_vtt_lines("test")
 
         assert len(results) == 3
@@ -99,6 +110,7 @@ class TestSearchResultMapping:
         result_proxy.all.return_value = []
 
         from db.vtt_lines import search_vtt_lines
+
         results = search_vtt_lines("nothing")
 
         assert results == []
@@ -108,6 +120,7 @@ class TestSearchResultMapping:
 # Tests: SQL generation & parameters (query only)
 # ---------------------------------------------------------------------------
 
+
 class TestSearchQueryOnly:
     """When called with just a query string (no optional filters)."""
 
@@ -116,6 +129,7 @@ class TestSearchQueryOnly:
         result_proxy.all.return_value = []
 
         from db.vtt_lines import search_vtt_lines
+
         search_vtt_lines("hello world")
 
         _, params = _get_sql_and_params(session)
@@ -129,6 +143,7 @@ class TestSearchQueryOnly:
         result_proxy.all.return_value = []
 
         from db.vtt_lines import search_vtt_lines
+
         search_vtt_lines("hello")
 
         sql, _ = _get_sql_and_params(session)
@@ -139,6 +154,7 @@ class TestSearchQueryOnly:
         result_proxy.all.return_value = []
 
         from db.vtt_lines import search_vtt_lines
+
         search_vtt_lines("hello")
 
         sql, _ = _get_sql_and_params(session)
@@ -150,6 +166,7 @@ class TestSearchQueryOnly:
         result_proxy.all.return_value = []
 
         from db.vtt_lines import search_vtt_lines
+
         search_vtt_lines("hello")
 
         sql, _ = _get_sql_and_params(session)
@@ -160,6 +177,7 @@ class TestSearchQueryOnly:
         result_proxy.all.return_value = []
 
         from db.vtt_lines import search_vtt_lines
+
         search_vtt_lines("hello")
 
         sql, _ = _get_sql_and_params(session)
@@ -171,6 +189,7 @@ class TestSearchQueryOnly:
         result_proxy.all.return_value = []
 
         from db.vtt_lines import search_vtt_lines
+
         search_vtt_lines("hello")
 
         sql, params = _get_sql_and_params(session)
@@ -190,12 +209,14 @@ class TestSearchQueryOnly:
 # Tests: custom threshold and limit
 # ---------------------------------------------------------------------------
 
+
 class TestCustomThresholdAndLimit:
     def test_custom_threshold(self, patch_get_session):
         session, result_proxy = patch_get_session
         result_proxy.all.return_value = []
 
         from db.vtt_lines import search_vtt_lines
+
         search_vtt_lines("test", threshold=0.5)
 
         _, params = _get_sql_and_params(session)
@@ -206,6 +227,7 @@ class TestCustomThresholdAndLimit:
         result_proxy.all.return_value = []
 
         from db.vtt_lines import search_vtt_lines
+
         search_vtt_lines("test", limit=100)
 
         _, params = _get_sql_and_params(session)
@@ -216,12 +238,14 @@ class TestCustomThresholdAndLimit:
 # Tests: optional filters
 # ---------------------------------------------------------------------------
 
+
 class TestSeriesIdFilter:
     def test_series_id_appears_in_sql_and_params(self, patch_get_session):
         session, result_proxy = patch_get_session
         result_proxy.all.return_value = []
 
         from db.vtt_lines import search_vtt_lines
+
         search_vtt_lines("test", series_id=42)
 
         sql, params = _get_sql_and_params(session)
@@ -235,6 +259,7 @@ class TestLanguageFilter:
         result_proxy.all.return_value = []
 
         from db.vtt_lines import search_vtt_lines
+
         search_vtt_lines("test", language="en")
 
         sql, params = _get_sql_and_params(session)
@@ -248,6 +273,7 @@ class TestLecturerIdFilter:
         result_proxy.all.return_value = []
 
         from db.vtt_lines import search_vtt_lines
+
         search_vtt_lines("test", lecturer_id=7)
 
         sql, params = _get_sql_and_params(session)
@@ -261,6 +287,7 @@ class TestLectureIdFilter:
         result_proxy.all.return_value = []
 
         from db.vtt_lines import search_vtt_lines
+
         search_vtt_lines("test", lecture_id=11401)
 
         sql, params = _get_sql_and_params(session)
@@ -274,6 +301,7 @@ class TestAllFiltersCombined:
         result_proxy.all.return_value = [_make_row()]
 
         from db.vtt_lines import search_vtt_lines
+
         results = search_vtt_lines(
             "test",
             series_id=42,
@@ -312,12 +340,14 @@ class TestAllFiltersCombined:
 # Tests: session lifecycle
 # ---------------------------------------------------------------------------
 
+
 class TestSessionLifecycle:
     def test_session_is_committed_and_closed(self, patch_get_session):
         session, result_proxy = patch_get_session
         result_proxy.all.return_value = []
 
         from db.vtt_lines import search_vtt_lines
+
         search_vtt_lines("test")
 
         session.commit.assert_called_once()
@@ -328,6 +358,7 @@ class TestSessionLifecycle:
         session.execute.side_effect = RuntimeError("DB error")
 
         from db.vtt_lines import search_vtt_lines
+
         with pytest.raises(RuntimeError, match="DB error"):
             search_vtt_lines("test")
 

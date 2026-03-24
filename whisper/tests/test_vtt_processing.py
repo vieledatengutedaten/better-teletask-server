@@ -43,7 +43,7 @@ class TestSaveVttLines:
       - get_series_of_vtt_file (db)
       - webvtt.from_string (pure)
       - bulk_insert_vtt_lines (db)
-    
+
     We mock all DB calls and provide a valid VTT string.
     """
 
@@ -63,7 +63,9 @@ class TestSaveVttLines:
             "Second line\n"
         )
         mock_get_vtt.return_value = VttFile(
-            id=1, lecture_id=11401, language="de",
+            id=1,
+            lecture_id=11401,
+            language="de",
             is_original_lang=True,
             vtt_data=vtt_content.encode("utf-8"),
             txt_data=b"Hello world\nSecond line",
@@ -73,6 +75,7 @@ class TestSaveVttLines:
         )
 
         from services.vtt_processing import save_vtt_lines
+
         save_vtt_lines(1)
 
         # Should have called bulk_insert with 2 VttLine objects
@@ -95,6 +98,7 @@ class TestSaveVttLines:
         mock_get_vtt.return_value = None
 
         from services.vtt_processing import save_vtt_lines
+
         save_vtt_lines(999)
 
         mock_bulk_insert.assert_not_called()
