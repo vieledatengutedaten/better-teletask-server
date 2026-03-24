@@ -58,4 +58,4 @@ async def get_subtitle(id: int, lang: str | None = None):
         await prioritize_lecture(id)
         raise HTTPException(status_code=404, detail="Subtitle not found")
     
-    return vtt_file
+    return Response(content = vtt_file,media_type="text/vtt", charset="utf-8", headers={"Access-Control-Allow-Origin": "https://www.tele-task.de"})

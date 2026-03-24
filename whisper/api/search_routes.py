@@ -26,7 +26,6 @@ async def fuzzy_search(q: str,
         lecturer_id=lecturer_id,
         lecture_id=lecture_id,
     )
-    # TODO jasonify this but we will do this with pydantic
-    return [result.content for result in search_results]
+    return [result.model_dump() for result in search_results]
         
     

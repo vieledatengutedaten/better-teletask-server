@@ -1,8 +1,8 @@
 """
 Tests for models/dataclasses.py
 
-These are pure Python dataclasses — no mocking required.
-Verifies construction, defaults, and basic behavior.
+These are Pydantic models — no mocking required.
+Verifies construction, defaults, validation, and basic behavior.
 """
 
 from datetime import date, datetime, timedelta
@@ -58,7 +58,7 @@ class TestApiKey:
         assert ak.person_name is None
 
     def test_equality(self):
-        """Dataclasses support equality by default."""
+        """Pydantic models support equality by default."""
         a = ApiKey(api_key="x", person_name="Alice")
         b = ApiKey(api_key="x", person_name="Alice")
         assert a == b
