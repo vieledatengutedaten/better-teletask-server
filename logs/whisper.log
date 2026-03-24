@@ -1,0 +1,61 @@
+[2026-03-24 16:31:26 INFO] [GLOBAL] Logger initialized.
+[2026-03-24 16:31:26 INFO] [GLOBAL] Added ID 11401 to priority queue.
+[2026-03-24 16:31:26 ERROR] [GLOBAL] ID 99999 cannot be prioritized as it is not available (response: 404).
+[2026-03-24 16:31:26 INFO] [GLOBAL] Successfully added API key.
+[2026-03-24 16:31:26 INFO] [GLOBAL] Successfully added API key.
+[2026-03-24 16:31:26 ERROR] [GLOBAL] Database function app.db.api_keys.add_api_key failed
+Traceback (most recent call last):
+  File "/home/cristian/Main/Projekte/teletaskconz/betterteletaskgit/better-teletask/backend/whisper/app/db/error_handling.py", line 31, in wrapper
+    result = function(*args, **kwargs)
+  File "/home/cristian/Main/Projekte/teletaskconz/betterteletaskgit/better-teletask/backend/whisper/app/db/api_keys.py", line 36, in add_api_key
+    session.execute(stmt)
+    ~~~~~~~~~~~~~~~^^^^^^
+  File "/usr/lib64/python3.13/unittest/mock.py", line 1169, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib64/python3.13/unittest/mock.py", line 1173, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib64/python3.13/unittest/mock.py", line 1228, in _execute_mock_call
+    raise effect
+sqlalchemy.exc.SQLAlchemyError: DB down
+[2026-03-24 16:31:26 INFO] [GLOBAL] Successfully queried API key by key.
+[2026-03-24 16:31:26 INFO] [GLOBAL] No API key found: nonexistent
+[2026-03-24 16:31:26 INFO] [GLOBAL] Successfully queried API key by key.
+[2026-03-24 16:31:26 INFO] [GLOBAL] Successfully queried all API keys.
+[2026-03-24 16:31:26 INFO] [GLOBAL] Successfully queried all API keys.
+[2026-03-24 16:31:27 INFO] [GLOBAL] Successfully removed API key: key_to_delete
+[2026-03-24 16:31:27 INFO] [GLOBAL] Successfully searched VTT lines.
+[2026-03-24 16:31:27 INFO] [GLOBAL] Successfully searched VTT lines.
+[2026-03-24 16:31:27 INFO] [GLOBAL] Successfully searched VTT lines.
+[2026-03-24 16:31:27 INFO] [GLOBAL] Successfully searched VTT lines.
+[2026-03-24 16:31:27 INFO] [GLOBAL] Successfully searched VTT lines.
+[2026-03-24 16:31:27 INFO] [GLOBAL] Successfully searched VTT lines.
+[2026-03-24 16:31:27 INFO] [GLOBAL] Successfully searched VTT lines.
+[2026-03-24 16:31:27 INFO] [GLOBAL] Successfully searched VTT lines.
+[2026-03-24 16:31:27 INFO] [GLOBAL] Successfully searched VTT lines.
+[2026-03-24 16:31:27 INFO] [GLOBAL] Successfully searched VTT lines.
+[2026-03-24 16:31:27 INFO] [GLOBAL] Successfully searched VTT lines.
+[2026-03-24 16:31:27 INFO] [GLOBAL] Successfully searched VTT lines.
+[2026-03-24 16:31:27 INFO] [GLOBAL] Successfully searched VTT lines.
+[2026-03-24 16:31:27 INFO] [GLOBAL] Successfully searched VTT lines.
+[2026-03-24 16:31:27 INFO] [GLOBAL] Successfully searched VTT lines.
+[2026-03-24 16:31:27 INFO] [GLOBAL] Successfully searched VTT lines.
+[2026-03-24 16:31:27 INFO] [GLOBAL] Successfully searched VTT lines.
+[2026-03-24 16:31:27 ERROR] [GLOBAL] Database function app.db.vtt_lines.search_vtt_lines failed
+Traceback (most recent call last):
+  File "/home/cristian/Main/Projekte/teletaskconz/betterteletaskgit/better-teletask/backend/whisper/app/db/error_handling.py", line 31, in wrapper
+    result = function(*args, **kwargs)
+  File "/home/cristian/Main/Projekte/teletaskconz/betterteletaskgit/better-teletask/backend/whisper/app/db/vtt_lines.py", line 104, in search_vtt_lines
+    rows = session.execute(sql, params).all()
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/usr/lib64/python3.13/unittest/mock.py", line 1169, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib64/python3.13/unittest/mock.py", line 1173, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib64/python3.13/unittest/mock.py", line 1228, in _execute_mock_call
+    raise effect
+RuntimeError: DB error
+[2026-03-24 16:31:27 ERROR] [GLOBAL] VTT file with ID 999 not found.

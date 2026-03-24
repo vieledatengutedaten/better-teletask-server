@@ -13,13 +13,8 @@ RUN pip install --no-cache-dir \
     torchaudio==2.4.0+cu124 \
     --index-url https://download.pytorch.org/whl/cu124
 
-COPY config.py logger.py main.py chain.pem ./
-COPY models/ models/
-COPY db/ db/
-COPY services/ services/
-COPY workers/ workers/
-COPY api/ api/
-COPY cli/ cli/
+COPY app/ app/
+COPY chain.pem ./
 
 ENV HF_HOME=${HF_HOME:-/models/huggingface} \
     TORCH_HOME=${TORCH_HOME:-/models/torch} \
@@ -27,4 +22,4 @@ ENV HF_HOME=${HF_HOME:-/models/huggingface} \
 
 RUN mkdir -p input output
 
-CMD [ "python", "main.py" ]
+CMD [ "python", "-m", "app.main" ]

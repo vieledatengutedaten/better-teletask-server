@@ -54,12 +54,12 @@ def patch_get_session(mock_conn):
             assert result == [1, 2]
     """
     targets = [
-        "db.connection.get_session",
-        "db.api_keys.get_session",
-        "db.lectures.get_session",
-        "db.vtt_files.get_session",
-        "db.vtt_lines.get_session",
-        "db.blacklist.get_session",
+        "app.db.connection.get_session",
+        "app.db.api_keys.get_session",
+        "app.db.lectures.get_session",
+        "app.db.vtt_files.get_session",
+        "app.db.vtt_lines.get_session",
+        "app.db.blacklist.get_session",
     ]
 
     @contextmanager
