@@ -9,11 +9,8 @@ from app.core.config import USERNAME_COOKIE, BASE_URL
 from app.db.lectures import add_lecture_data, get_language_of_lecture
 from app.db.vtt_files import getHighestTeletaskID
 
-from app.core import logger
+from app.core.logger import logger
 import logging
-
-logger = logging.getLogger("btt_root_logger")
-
 
 def fetchBody(id) -> Response:
     cookies = {"username": USERNAME_COOKIE}

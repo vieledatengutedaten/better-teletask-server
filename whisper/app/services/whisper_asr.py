@@ -1,8 +1,5 @@
 # setup logging
-from app.core import logger
-import logging
-
-logger = logging.getLogger("btt_root_logger")
+from app.core.logger import logger
 logger.propagate = False
 
 import whisperx

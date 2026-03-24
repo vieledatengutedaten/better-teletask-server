@@ -1,14 +1,11 @@
 import os
 import requests
-from app.core import logger
+from app.core.logger import logger
 import logging
 from tqdm import tqdm
 import ffmpeg
 
 from app.core.config import INPUT_PATH, OUTPUT_PATH
-
-logger = logging.getLogger("btt_root_logger")
-
 
 def downloadMP4(url, id):
     try:

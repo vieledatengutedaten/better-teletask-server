@@ -4,12 +4,7 @@ from app.db.connection import engine
 from app.db.error_handling import db_operation
 from app.db.schema import Base
 
-from app.core import logger
-import logging
-
-logger = logging.getLogger("btt_root_logger")
-
-
+from app.core.logger import logger
 @db_operation(success_message="Initialized database schema.")
 def initDatabase():
     with engine.begin() as conn:

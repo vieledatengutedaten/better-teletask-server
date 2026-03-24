@@ -6,12 +6,7 @@ from app.db.error_handling import db_operation
 from app.db.schema import ApiKeyRecord
 from app.models import ApiKey
 
-from app.core import logger
-import logging
-
-logger = logging.getLogger("btt_root_logger")
-
-
+from app.core.logger import logger
 def _to_api_key(record: ApiKeyRecord) -> ApiKey:
     return ApiKey(
         id=record.id,

@@ -7,11 +7,7 @@ from app.api.subtitle_routes import subtitle_router
 from app.api.scheduling_routes import schedule_router
 
 # setup logging — must be imported before other modules to configure handlers
-from app.core import logger
-import logging
-
-logger = logging.getLogger("btt_root_logger")
-
+from app.core.logger import logger
 app = FastAPI()
 
 app.include_router(router=subtitle_router, prefix="/subtitle")

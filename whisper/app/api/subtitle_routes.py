@@ -5,12 +5,7 @@ from datetime import datetime
 from app import db
 import httpx
 
-from app.core import logger
-import logging
-
-logger = logging.getLogger("btt_root_logger")
-
-
+from app.core.logger import logger
 async def verify_auth_header(authorization: str | None = Header(default=None)):
     # works, skip for testing
     return

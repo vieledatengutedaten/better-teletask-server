@@ -4,12 +4,7 @@ from app.db.vtt_lines import bulk_insert_vtt_lines
 from app.db.lectures import get_series_of_vtt_file
 from app.models import VttFile, VttLine
 
-from app.core import logger
-import logging
-
-logger = logging.getLogger("btt_root_logger")
-
-
+from app.core.logger import logger
 # HH:MM:SS.mmm
 def timestamp_to_ms(timestamp: str) -> int:
     parts = timestamp.split(":")

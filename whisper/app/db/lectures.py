@@ -13,12 +13,7 @@ from app.db.schema import (
 )
 from app.models import SeriesData
 
-from app.core import logger
-import logging
-
-logger = logging.getLogger("btt_root_logger")
-
-
+from app.core.logger import logger
 @db_operation(success_message="Successfully queried series of VTT file.")
 def get_series_of_vtt_file(vtt_file_id) -> SeriesData | None:
     with get_session() as session:

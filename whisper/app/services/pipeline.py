@@ -1,4 +1,4 @@
-from app.core import logger
+from app.core.logger import logger
 import logging
 
 from app.core.config import INPUT_PATH
@@ -8,9 +8,6 @@ from app.db.lectures import get_language_of_lecture
 from app.db.vtt_files import save_vtt_as_blob
 
 from requests.models import HTTPError
-
-logger = logging.getLogger("btt_root_logger")
-
 
 def transcribePipelineVideoByID(id):
     # lazyload whisper here to avoid the annoying waiting time

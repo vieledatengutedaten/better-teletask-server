@@ -2,9 +2,7 @@ from functools import wraps
 import inspect
 from typing import Any, Callable, ParamSpec, TypeVar
 
-import logging
-
-logger = logging.getLogger("btt_root_logger")
+from app.core.logger import logger
 
 P = ParamSpec("P")
 R = TypeVar("R")

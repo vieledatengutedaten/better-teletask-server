@@ -4,11 +4,7 @@ import contextlib
 from fastapi import FastAPI
 
 # setup logging — must be imported before other modules to configure handlers
-from app.core import logger
-import logging
-
-logger = logging.getLogger("btt_root_logger")
-
+from app.core.logger import logger
 from app.db.migrations import initDatabase
 from app.db.vtt_files import getSmallestTeletaskID
 from app.db.blacklist import get_missing_available_inbetween_ids

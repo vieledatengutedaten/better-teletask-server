@@ -13,12 +13,7 @@ from app.workers.queues import (
     multi_lock,
 )
 
-from app.core import logger
-import logging
-
-logger = logging.getLogger("btt_root_logger")
-
-
+from app.core.logger import logger
 async def get_id_for_worker() -> Optional[int]:
     """Get the next ID to process from the queues in order of priority."""
     logger.info("Getting ID for worker...")

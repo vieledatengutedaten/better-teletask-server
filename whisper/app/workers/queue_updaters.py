@@ -11,12 +11,7 @@ from app.workers.queues import (
     multi_lock,
 )
 
-from app.core import logger
-import logging
-
-logger = logging.getLogger("btt_root_logger")
-
-
+from app.core.logger import logger
 async def update_upper_ids_periodically():
     """Periodically update the forward queue with new upper IDs."""
     sleep_time = 1200

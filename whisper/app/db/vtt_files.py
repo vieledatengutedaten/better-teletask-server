@@ -9,12 +9,7 @@ from app.db.schema import VttFileRecord
 from app.models import VttFile
 from app.core.config import OUTPUT_PATH, ASR_MODEL, COMPUTE_TYPE
 
-from app.core import logger
-import logging
-
-logger = logging.getLogger("btt_root_logger")
-
-
+from app.core.logger import logger
 def _to_vtt_file(record: VttFileRecord) -> VttFile:
     return VttFile(
         id=record.id,

@@ -12,7 +12,8 @@ print(
 )
 
 # Ensure the logs directory exists
-LOG_FILE_PATH = "logs/whisper.log"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+LOG_FILE_PATH = os.path.join(BASE_DIR, "logs/whisper.log")
 os.makedirs(os.path.dirname(LOG_FILE_PATH), exist_ok=True)
 
 

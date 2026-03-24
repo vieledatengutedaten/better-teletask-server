@@ -6,12 +6,7 @@ from app.db.error_handling import db_operation
 from app.db.schema import BlacklistIdRecord
 from app.db.vtt_files import get_missing_inbetween_ids
 
-from app.core import logger
-import logging
-
-logger = logging.getLogger("btt_root_logger")
-
-
+from app.core.logger import logger
 @db_operation(
     success_message="Successfully added Teletask ID {teletaskid} to blacklist."
 )
