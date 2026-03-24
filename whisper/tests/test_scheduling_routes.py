@@ -1,5 +1,5 @@
 """
-Tests for api/routes.py
+Tests for api/scheduling_routes.py
 
 Uses FastAPI's TestClient to make real HTTP calls against the app
 without needing a running server. Queues and external services are mocked.
@@ -10,14 +10,14 @@ from unittest.mock import patch, AsyncMock, MagicMock
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from api.routes import router
+from api.scheduling_routes import schedule_router
 
 
 @pytest.fixture
 def app():
-    """Create a fresh FastAPI app with the router mounted."""
+    """Create a fresh FastAPI app with the schedule_router mounted."""
     app = FastAPI()
-    app.include_router(router)
+    app.include_router(schedule_router)
     return app
 
 
@@ -35,11 +35,11 @@ class TestPing:
 
 
 class TestGetQueues:
-    @patch("api.routes.in_process_queue")
-    @patch("api.routes.backward_queue")
-    @patch("api.routes.in_between_queue")
-    @patch("api.routes.forward_queue")
-    @patch("api.routes.prio_queue")
+    @patch("api.scheduling_routes.in_process_queue")
+    @patch("api.scheduling_routes.backward_queue")
+    @patch("api.scheduling_routes.in_between_queue")
+    @patch("api.scheduling_routes.forward_queue")
+    @patch("api.scheduling_routes.prio_queue")
     def test_returns_all_queues(
         self, mock_prio, mock_fwd, mock_inb, mock_bwd, mock_inp, client
     ):
@@ -61,13 +61,13 @@ class TestGetQueues:
 
 
 class TestPrioritize:
-    @patch("api.routes.multi_lock")
-    @patch("api.routes.in_process_queue")
-    @patch("api.routes.backward_queue")
-    @patch("api.routes.in_between_queue")
-    @patch("api.routes.forward_queue")
-    @patch("api.routes.prio_queue")
-    @patch("api.routes.pingVideoByID", return_value="200")
+    @patch("api.scheduling_routes.multi_lock")
+    @patch("api.scheduling_routes.in_process_queue")
+    @patch("api.scheduling_routes.backward_queue")
+    @patch("api.scheduling_routes.in_between_queue")
+    @patch("api.scheduling_routes.forward_queue")
+    @patch("api.scheduling_routes.prio_queue")
+    @patch("api.scheduling_routes.pingVideoByID", return_value="200")
     def test_prioritize_available_id(
         self, mock_ping, mock_prio, mock_fwd, mock_inb, mock_bwd, mock_inp,
         mock_multi_lock, client
@@ -88,7 +88,7 @@ class TestPrioritize:
         assert response.status_code == 200
         assert "prioritized" in response.json()["message"]
 
-    @patch("api.routes.pingVideoByID", return_value="404")
+    @patch("api.scheduling_routes.pingVideoByID", return_value="404")
     def test_prioritize_unavailable_id(self, mock_ping, client):
         response = client.post("/prioritize/99999")
         assert response.status_code == 200

@@ -17,7 +17,7 @@ from workers.queues import (
 )
 from workers.transcribe_worker import transcribe_worker
 from workers.queue_updaters import update_upper_ids_periodically, update_inbetween_ids_periodically
-from api.routes import router
+from api.scheduling_routes import schedule_router
 
 
 @contextlib.asynccontextmanager
@@ -68,7 +68,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
-app.include_router(router)
+app.include_router(schedule_router, "/schedule")
 
 
 if __name__ == "__main__":

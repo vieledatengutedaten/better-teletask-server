@@ -10,10 +10,10 @@ import logger
 import logging
 logger = logging.getLogger("btt_root_logger")
 
-router = APIRouter()
+schedule_router = APIRouter()
 
 
-@router.get("/queues")
+@schedule_router.get("/queues")
 async def get_queues():
     prio = await prio_queue.get_all()
     forward = await forward_queue.get_all()
@@ -29,12 +29,12 @@ async def get_queues():
     }
 
 
-@router.get("/ping")
+@schedule_router.get("/ping")
 async def ping_pong():
     return "pong"
 
 
-@router.post("/prioritize/{id}")
+@schedule_router.post("/prioritize/{id}")
 async def prioritize_id(id: int):
     res = pingVideoByID(str(id))
     if res == "200":

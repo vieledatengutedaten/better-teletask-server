@@ -204,3 +204,18 @@ def get_missing_translations():
             .order_by(desc(VttFileRecord.lecture_id))
         ).all()
         return [(row[0], row[1]) for row in rows]
+
+
+@db_operation(success_message="Successfully queried VTT file by ID {lecture_id} and language {language}.")
+def get_vtt_by_id_and_lang(lecture_id, language):
+    with get_session() as session:
+        vtt_data = session.execute(
+            select(VttFileRecord.vtt_data).where(
+                VttFileRecord.lecture_id == lecture_id,
+                VttFileRecord.language == language,
+            )
+        ).scalar_one_or_none()
+        if vtt_data:
+            return bytes(vtt_data).decode("utf-8")
+        logger.info(f"No VTT file found for Teletask ID: {lecture_id} and language: {language}")
+        return None
