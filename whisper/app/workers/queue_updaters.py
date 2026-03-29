@@ -12,6 +12,8 @@ from app.workers.queues import (
 )
 
 from app.core.logger import logger
+
+
 async def update_upper_ids_periodically():
     """Periodically update the forward queue with new upper IDs."""
     sleep_time = 1200

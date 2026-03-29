@@ -5,6 +5,8 @@ from app.db.lectures import get_series_of_vtt_file
 from app.models import VttFile, VttLine
 
 from app.core.logger import logger
+
+
 # HH:MM:SS.mmm
 def timestamp_to_ms(timestamp: str) -> int:
     parts = timestamp.split(":")

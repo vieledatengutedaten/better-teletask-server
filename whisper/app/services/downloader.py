@@ -7,6 +7,7 @@ import ffmpeg
 
 from app.core.config import INPUT_PATH, OUTPUT_PATH
 
+
 def downloadMP4(url, id):
     try:
         mp4_response = requests.get(url, stream=True, verify="chain.pem")

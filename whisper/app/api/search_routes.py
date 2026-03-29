@@ -4,6 +4,7 @@ from app.models.dataclasses import SearchResult
 from app.db.vtt_lines import search_vtt_lines
 
 from app.core.logger import logger
+
 search_router = APIRouter()
 
 

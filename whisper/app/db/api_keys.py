@@ -7,6 +7,8 @@ from app.db.schema import ApiKeyRecord
 from app.models import ApiKey
 
 from app.core.logger import logger
+
+
 def _to_api_key(record: ApiKeyRecord) -> ApiKey:
     return ApiKey(
         id=record.id,

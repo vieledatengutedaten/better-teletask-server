@@ -7,6 +7,8 @@ from app.db.schema import VttLineRecord
 from app.models import VttLine, SearchResult
 
 from app.core.logger import logger
+
+
 @db_operation(success_message="Successfully bulk inserted {vtt_lines_len} VTT lines.")
 def bulk_insert_vtt_lines(vtt_lines: list[VttLine]):
     if not vtt_lines:

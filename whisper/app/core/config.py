@@ -16,7 +16,9 @@ COMPUTE_TYPE = os.environ.get("COMPUTE_TYPE")
 DEVICE = os.environ.get("DEVICE", "cuda")
 
 # --- Paths ---
-SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+SCRIPT_DIR = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
 VTT_DEST_FOLDER = os.environ.get("VTT_DEST_FOLDER", "output/")
 RECORDING_SOURCE_FOLDER = os.environ.get("RECORDING_SOURCE_FOLDER", "input/")
 INPUT_PATH = os.path.join(SCRIPT_DIR, RECORDING_SOURCE_FOLDER)

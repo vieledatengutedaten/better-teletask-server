@@ -1,5 +1,6 @@
 # setup logging
 from app.core.logger import logger
+
 logger.propagate = False
 
 import whisperx

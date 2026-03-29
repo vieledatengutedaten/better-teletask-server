@@ -14,6 +14,8 @@ from app.workers.queues import (
 )
 
 from app.core.logger import logger
+
+
 async def get_id_for_worker() -> Optional[int]:
     """Get the next ID to process from the queues in order of priority."""
     logger.info("Getting ID for worker...")
@@ -51,6 +53,7 @@ async def get_id_for_worker() -> Optional[int]:
             return await get_id_for_worker()
     else:
         return None
+
 
 # i was on crack when writing this TODO
 async def remove_id_from_in_process(id: int):

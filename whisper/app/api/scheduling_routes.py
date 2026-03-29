@@ -11,6 +11,7 @@ from app.workers.queues import (
 )
 
 from app.core.logger import logger
+
 schedule_router = APIRouter()
 
 

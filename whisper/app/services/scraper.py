@@ -12,6 +12,7 @@ from app.db.vtt_files import getHighestTeletaskID
 from app.core.logger import logger
 import logging
 
+
 def fetchBody(id) -> Response:
     cookies = {"username": USERNAME_COOKIE}
     url = BASE_URL + str(id)
