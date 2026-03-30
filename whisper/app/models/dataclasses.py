@@ -9,7 +9,6 @@ from pydantic import BaseModel, field_validator
 class SeriesData(BaseModel):
     series_id: int
     series_name: Optional[str] = None
-    lecturer_ids: Optional[list[int]] = None
 
 
 class LecturerData(BaseModel):
@@ -21,7 +20,6 @@ class LectureData(BaseModel):
     lecture_id: int
     language: Optional[str] = None
     date: Optional[dt_date] = None
-    lecturer_ids: Optional[list[int]] = None
     series_id: Optional[int] = None
     semester: Optional[str] = None
     duration: Optional[dt_timedelta] = None

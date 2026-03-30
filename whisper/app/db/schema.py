@@ -28,8 +28,20 @@ class SeriesDataRecord(Base):
 
     series_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     series_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    lecturer_ids: Mapped[list[int] | None] = mapped_column(
-        ARRAY(Integer), nullable=True
+
+
+class SeriesLecturerRecord(Base):
+    __tablename__ = "series_lecturers"
+
+    series_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("series_data.series_id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    lecturer_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("lecturer_data.lecturer_id", ondelete="CASCADE"),
+        primary_key=True,
     )
 
 
@@ -46,16 +58,32 @@ class LectureDataRecord(Base):
     lecture_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     language: Mapped[str | None] = mapped_column(String(50), nullable=True)
     date: Mapped[dt_date | None] = mapped_column(Date, nullable=True)
-    lecturer_ids: Mapped[list[int] | None] = mapped_column(
-        ARRAY(Integer), nullable=True
+    series_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("series_data.series_id", ondelete="SET NULL"),
+        nullable=True,
     )
-    series_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     semester: Mapped[str | None] = mapped_column(String(50), nullable=True)
     duration: Mapped[dt_timedelta | None] = mapped_column(Interval, nullable=True)
     title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     video_mp4: Mapped[str | None] = mapped_column(String(255), nullable=True)
     desktop_mp4: Mapped[str | None] = mapped_column(String(255), nullable=True)
     podcast_mp4: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+
+class LectureLecturerRecord(Base):
+    __tablename__ = "lecture_lecturers"
+
+    lecture_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("lecture_data.lecture_id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    lecturer_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("lecturer_data.lecturer_id", ondelete="CASCADE"),
+        primary_key=True,
+    )
 
 
 class VttFileRecord(Base):

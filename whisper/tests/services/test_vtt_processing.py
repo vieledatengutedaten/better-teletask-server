@@ -41,6 +41,7 @@ class TestSaveVttLines:
     save_vtt_lines calls:
       - get_vtt_file_by_id (db)
       - get_series_of_vtt_file (db)
+      - get_lecturer_ids_of_lecture (db)
       - webvtt.from_string (pure)
       - bulk_insert_vtt_lines (db)
 
@@ -48,10 +49,11 @@ class TestSaveVttLines:
     """
 
     @patch("app.services.vtt_processing.bulk_insert_vtt_lines")
+    @patch("app.services.vtt_processing.get_lecturer_ids_of_lecture")
     @patch("app.services.vtt_processing.get_series_of_vtt_file")
     @patch("app.services.vtt_processing.get_vtt_file_by_id")
     def test_parses_vtt_and_inserts_lines(
-        self, mock_get_vtt, mock_get_series, mock_bulk_insert
+        self, mock_get_vtt, mock_get_series, mock_get_lecturers, mock_bulk_insert
     ):
         from app.models import VttFile, SeriesData
 
@@ -71,8 +73,9 @@ class TestSaveVttLines:
             txt_data=b"Hello world\nSecond line",
         )
         mock_get_series.return_value = SeriesData(
-            series_id=42, series_name="Test Series", lecturer_ids=[1, 2]
+            series_id=42, series_name="Test Series"
         )
+        mock_get_lecturers.return_value = [1, 2]
 
         from app.services.vtt_processing import save_vtt_lines
 
@@ -90,10 +93,11 @@ class TestSaveVttLines:
         assert lines[1].line_number == 2
 
     @patch("app.services.vtt_processing.bulk_insert_vtt_lines")
+    @patch("app.services.vtt_processing.get_lecturer_ids_of_lecture")
     @patch("app.services.vtt_processing.get_series_of_vtt_file")
     @patch("app.services.vtt_processing.get_vtt_file_by_id")
     def test_returns_early_if_vtt_not_found(
-        self, mock_get_vtt, mock_get_series, mock_bulk_insert
+        self, mock_get_vtt, mock_get_series, mock_get_lecturers, mock_bulk_insert
     ):
         mock_get_vtt.return_value = None
 

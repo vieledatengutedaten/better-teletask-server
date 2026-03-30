@@ -21,15 +21,13 @@ from app.models import (
 
 class TestSeriesData:
     def test_create_with_all_fields(self):
-        s = SeriesData(series_id=1, series_name="Test Series", lecturer_ids=[10, 20])
+        s = SeriesData(series_id=1, series_name="Test Series")
         assert s.series_id == 1
         assert s.series_name == "Test Series"
-        assert s.lecturer_ids == [10, 20]
 
     def test_defaults(self):
         s = SeriesData(series_id=1)
         assert s.series_name is None
-        assert s.lecturer_ids is None
 
 
 class TestLectureData:
@@ -44,7 +42,6 @@ class TestLectureData:
             lecture_id=11401,
             language="de",
             date=date(2025, 6, 15),
-            lecturer_ids=[1, 2],
             series_id=42,
             semester="SS2025",
             duration=timedelta(hours=1, minutes=30),

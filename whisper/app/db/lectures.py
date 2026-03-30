@@ -1,14 +1,16 @@
 from datetime import datetime
 
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.db.connection import get_session
 from app.db.error_handling import db_operation
 from app.db.schema import (
     LectureDataRecord,
+    LectureLecturerRecord,
     LecturerDataRecord,
     SeriesDataRecord,
+    SeriesLecturerRecord,
     VttFileRecord,
 )
 from app.models import SeriesData
@@ -23,7 +25,6 @@ def get_series_of_vtt_file(vtt_file_id) -> SeriesData | None:
             select(
                 SeriesDataRecord.series_id,
                 SeriesDataRecord.series_name,
-                SeriesDataRecord.lecturer_ids,
             )
             .join(
                 LectureDataRecord,
@@ -39,10 +40,21 @@ def get_series_of_vtt_file(vtt_file_id) -> SeriesData | None:
             return SeriesData(
                 series_id=row[0],
                 series_name=row[1],
-                lecturer_ids=row[2],
             )
         logger.info(f"No series found for VTT file ID: {vtt_file_id}")
         return None
+
+
+@db_operation(success_message="Successfully queried lecturer IDs for lecture.")
+def get_lecturer_ids_of_lecture(lecture_id: int) -> list[int]:
+    """Get lecturer IDs for a lecture via the lecture_lecturers junction table."""
+    with get_session() as session:
+        rows = session.execute(
+            select(LectureLecturerRecord.lecturer_id).where(
+                LectureLecturerRecord.lecture_id == lecture_id
+            )
+        ).all()
+        return [row[0] for row in rows]
 
 
 @db_operation(success_message="Successfully queried all lecture IDs.")
@@ -98,71 +110,50 @@ def add_lecture_data(lecture_data):
         else:
             semester = f"ST {lecture_date.year}"
 
+        # Upsert lecturers
         for lecturer_id, lecturer_name in zip(lecturer_ids, lecturer_names):
-            exists = session.execute(
-                select(func.count())
-                .select_from(LecturerDataRecord)
-                .where(LecturerDataRecord.lecturer_id == lecturer_id)
-            ).scalar_one()
-            if not exists:
-                stmt = pg_insert(LecturerDataRecord).values(
-                    lecturer_id=lecturer_id,
-                    lecturer_name=lecturer_name,
-                )
-                stmt = stmt.on_conflict_do_nothing(
-                    index_elements=[LecturerDataRecord.lecturer_id]
-                )
-                session.execute(stmt)
-                logger.info(
-                    f"Added lecturer data for Lecturer ID {lecturer_id}.",
-                    extra={"id": teletaskid},
-                )
-
-        series_exists = session.execute(
-            select(func.count())
-            .select_from(SeriesDataRecord)
-            .where(SeriesDataRecord.series_id == series_id)
-        ).scalar_one()
-
-        if not series_exists:
-            stmt = pg_insert(SeriesDataRecord).values(
-                series_id=series_id,
-                series_name=series_name,
-                lecturer_ids=lecturer_ids,
+            stmt = pg_insert(LecturerDataRecord).values(
+                lecturer_id=lecturer_id,
+                lecturer_name=lecturer_name,
             )
             stmt = stmt.on_conflict_do_nothing(
-                index_elements=[SeriesDataRecord.series_id]
+                index_elements=[LecturerDataRecord.lecturer_id]
             )
             session.execute(stmt)
             logger.info(
-                f"Added series data for Series ID {series_id}.",
-                extra={"id": teletaskid},
-            )
-        else:
-            session.execute(
-                text("""
-                    UPDATE series_data
-                    SET lecturer_ids = array(
-                        SELECT DISTINCT unnest(lecturer_ids || CAST(:lecturer_ids AS INTEGER[]))
-                    )
-                    WHERE series_id = :series_id;
-                    """),
-                {
-                    "lecturer_ids": lecturer_ids,
-                    "series_id": series_id,
-                },
-            )
-            logger.info(
-                f"Updated lecturer IDs for Series ID {series_id}.",
+                f"Upserted lecturer data for Lecturer ID {lecturer_id}.",
                 extra={"id": teletaskid},
             )
 
+        # Upsert series
+        stmt = pg_insert(SeriesDataRecord).values(
+            series_id=series_id,
+            series_name=series_name,
+        )
+        stmt = stmt.on_conflict_do_nothing(
+            index_elements=[SeriesDataRecord.series_id]
+        )
+        session.execute(stmt)
+        logger.info(
+            f"Upserted series data for Series ID {series_id}.",
+            extra={"id": teletaskid},
+        )
+
+        # Link series ↔ lecturers (junction table)
+        for lecturer_id in lecturer_ids:
+            stmt = pg_insert(SeriesLecturerRecord).values(
+                series_id=series_id,
+                lecturer_id=lecturer_id,
+            )
+            stmt = stmt.on_conflict_do_nothing()
+            session.execute(stmt)
+
+        # Insert lecture
         session.execute(
             pg_insert(LectureDataRecord).values(
                 lecture_id=teletaskid,
                 language=language,
                 date=lecture_date,
-                lecturer_ids=lecturer_ids,
                 series_id=series_id,
                 semester=semester,
                 duration=duration,
@@ -170,6 +161,15 @@ def add_lecture_data(lecture_data):
                 video_mp4=url,
             )
         )
+
+        # Link lecture ↔ lecturers (junction table)
+        for lecturer_id in lecturer_ids:
+            stmt = pg_insert(LectureLecturerRecord).values(
+                lecture_id=teletaskid,
+                lecturer_id=lecturer_id,
+            )
+            stmt = stmt.on_conflict_do_nothing()
+            session.execute(stmt)
 
 
 @db_operation(success_message="Successfully queried lecture language.")

@@ -1,7 +1,7 @@
 import webvtt
 from app.db.vtt_files import get_vtt_file_by_id
 from app.db.vtt_lines import bulk_insert_vtt_lines
-from app.db.lectures import get_series_of_vtt_file
+from app.db.lectures import get_series_of_vtt_file, get_lecturer_ids_of_lecture
 from app.models import VttFile, VttLine
 
 from app.core.logger import logger
@@ -23,19 +23,20 @@ def timestamp_to_ms(timestamp: str) -> int:
 
 def save_vtt_lines(vtt_id: int):
     vtt_file: VttFile = get_vtt_file_by_id(vtt_id)
-    series = get_series_of_vtt_file(vtt_id)
-    lecturer_ids = series.lecturer_ids if series else []
 
     if not vtt_file:
         logger.error(f"VTT file with ID {vtt_id} not found.")
         return
+
+    series = get_series_of_vtt_file(vtt_id)
+    lecturer_ids = get_lecturer_ids_of_lecture(vtt_file.lecture_id)
 
     vtt_lines: list[VttLine] = []
     for i, caption in enumerate(webvtt.from_string(vtt_file.vtt_data.decode("utf-8"))):
         line = VttLine(
             id=None,
             vtt_file_id=vtt_file.id,
-            series_id=series.series_id,
+            series_id=series.series_id if series else 0,
             language=vtt_file.language,
             lecturer_ids=lecturer_ids,
             line_number=i + 1,

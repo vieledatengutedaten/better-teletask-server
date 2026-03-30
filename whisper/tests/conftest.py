@@ -121,5 +121,4 @@ def sample_series_data():
     return {
         "series_id": 42,
         "series_name": "Introduction to Testing",
-        "lecturer_ids": [1, 2],
     }
