@@ -1,14 +1,17 @@
 import requests
 import os
 import re
-from typing import List, Dict, Any, Optional, Tuple
+
+from typing import Any
+
+from pydantic import BaseModel, computed_field
 
 from app.core.config import OLLAMA_URL, OLLAMA_MODEL, OUTPUT_PATH
 from app.db.vtt_files import get_original_vtt_by_id, get_original_language_by_id
 
 from app.core.logger import logger
 
-LANGUAGES: Dict[str, str] = {
+LANGUAGES: dict[str, str] = {
     "de": "German",
     "en": "English",
 }
@@ -19,40 +22,44 @@ TIMESTAMP_LINE_PATTERN = re.compile(
 )
 
 
-def get_original_translation(config: Dict[str, Any]) -> str:
+class TranslationConfig(BaseModel):
+    id: int
+    from_language: str
+    to_language: str
+    ollama_url: str
+    model_name: str
+    chunk_size_chars: int = 3500
+    context_window_chars: int = 500
+
+    @computed_field
+    @property
+    def input_file(self) -> str:
+        return f"{OUTPUT_PATH}{self.id}.vtt"
+
+    @computed_field
+    @property
+    def output_file(self) -> str:
+        return f"{OUTPUT_PATH}{self.id}{self.to_language}.vtt"
+
+
+def get_original_vtt(config: TranslationConfig) -> str | None:
     try:
-        return read_file_content(config["input_file"])
+        return read_file_content(config.input_file)
     except FileNotFoundError as e:
         logger.debug(
             f"Input file not found: {e}. Attempting to retrieve from database.",
-            extra={"id": config["id"]},
+            extra={"id": config.id},
         )
 
     try:
-        return get_original_vtt_by_id(int(config["id"]))
+        return get_original_vtt_by_id(config.id)
     except Exception as db_e:
         logger.debug(
             f"Failed to retrieve original translation from database: {db_e}",
-            extra={"id": config["id"]},
+            extra={"id": config.id},
         )
 
     return None
-
-
-def generate_config(
-    id: int, from_language: str, to_language: str, ollama_url: str, model_name: str
-) -> Dict[str, Any]:
-    return {
-        "id": id,
-        "input_file": f"{OUTPUT_PATH}{id}.vtt",
-        "output_file": f"{OUTPUT_PATH}{id}{to_language}.vtt",
-        "ollama_url": ollama_url,
-        "model_name": model_name,
-        "chunk_size_chars": 3500,
-        "context_window_chars": 500,
-        "from_language": from_language,
-        "to_language": to_language,
-    }
 
 
 def read_file_content(file_path: str) -> str:
@@ -64,26 +71,26 @@ def read_file_content(file_path: str) -> str:
         return f.read()
 
 
-def parse_vtt_blocks(raw_content: str) -> Tuple[str, List[str]]:
+def parse_vtt_blocks(raw_content: str) -> tuple[str, list[str]]:
     """Splits raw VTT content into blocks and separates the header."""
     normalized_content: str = raw_content.replace("\r\n", "\n")
-    blocks: List[str] = normalized_content.split("\n\n")
+    blocks: list[str] = normalized_content.split("\n\n")
 
     if blocks and "WEBVTT" in blocks[0].upper():
         header: str = blocks[0].strip()
-        actual_blocks: List[str] = blocks[1:]
+        actual_blocks: list[str] = blocks[1:]
     else:
         header = "WEBVTT"
         actual_blocks = blocks
 
-    cleaned_blocks: List[str] = [b.strip() for b in actual_blocks if b.strip()]
+    cleaned_blocks: list[str] = [b.strip() for b in actual_blocks if b.strip()]
     return header, cleaned_blocks
 
 
-def process_block_timestamps(blocks: List[str]) -> Tuple[List[str], Dict[str, str]]:
+def process_block_timestamps(blocks: list[str]) -> tuple[list[str], dict[str, str]]:
     """Extracts timestamps from each block and maps them to a placeholder."""
-    clean_blocks: List[str] = []
-    timestamp_map: Dict[str, str] = {}
+    clean_blocks: list[str] = []
+    timestamp_map: dict[str, str] = {}
 
     for i, block in enumerate(blocks):
         match = TIMESTAMP_LINE_PATTERN.search(block)
@@ -105,10 +112,10 @@ def process_block_timestamps(blocks: List[str]) -> Tuple[List[str], Dict[str, st
     return clean_blocks, timestamp_map
 
 
-def group_blocks_into_chunks(blocks: List[str], max_chars: int) -> List[str]:
+def group_blocks_into_chunks(blocks: list[str], max_chars: int) -> list[str]:
     """Groups subtitle blocks into chunks."""
-    chunks: List[str] = []
-    current_batch: List[str] = []
+    chunks: list[str] = []
+    current_batch: list[str] = []
     current_length: int = 0
 
     for block in blocks:
@@ -156,9 +163,9 @@ Requirements:
 {chunk_text}"""
 
 
-def query_ollama(prompt: str, url: str, model: str) -> Optional[str]:
+def query_ollama(prompt: str, url: str, model: str) -> str | None:
     """Sends the prompt to Ollama and returns the response text."""
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "model": model,
         "prompt": prompt,
         "stream": False,
@@ -168,7 +175,7 @@ def query_ollama(prompt: str, url: str, model: str) -> Optional[str]:
     try:
         response = requests.post(url, json=payload)
         response.raise_for_status()
-        data: Dict[str, Any] = response.json()
+        data: dict[str, Any] = response.json()
         return data.get("response", "").strip()
     except Exception as e:
         logger.error(f"  [!] Request failed: {e}")
@@ -179,11 +186,11 @@ PLACEHOLDER_PATTERN = re.compile(r"TS\d+")
 
 
 def reinsert_timestamps(
-    translated_blocks: List[str], timestamp_map: Dict[str, str]
-) -> List[str]:
+    translated_blocks: list[str], timestamp_map: dict[str, str]
+) -> list[str]:
     """Replaces placeholder tokens with original timestamps."""
 
-    def replace_placeholder(match: re.Match) -> str:
+    def replace_placeholder(match: re.Match[str]) -> str:
         placeholder = match.group(0)
         return timestamp_map.get(placeholder, placeholder)
 
@@ -193,17 +200,17 @@ def reinsert_timestamps(
     ]
 
 
-def save_vtt_file(file_path: str, header: str, content_blocks: List[str]) -> None:
+def save_vtt_file(file_path: str, header: str, content_blocks: list[str]) -> None:
     """Assembles blocks, prepends the header, and writes the final VTT file."""
     translated_content: str = "\n\n".join(content_blocks)
     final_output: str = f"{header}\n\n{translated_content}"
 
     with open(file_path, "w", encoding="utf-8") as f:
-        f.write(final_output)
+        _ = f.write(final_output)
 
 
 def run_translation_workflow(
-    id: int, to_langauge: str, from_language: Optional[str]
+    id: int, to_langauge: str, from_language: str | None
 ) -> None:
     """Orchestrates the translation with full pre- and post-processing."""
 
@@ -212,12 +219,23 @@ def run_translation_workflow(
     if from_language is None:
         from_language = get_original_language_by_id(id)
 
-    config: Dict[str, Any] = generate_config(
-        id, from_language, to_langauge, OLLAMA_URL, OLLAMA_MODEL
+    if from_language is None:
+        logger.error(
+            f"Could not determine source language for ID {id}. Aborting translation.",
+            extra={"id": id},
+        )
+        return
+
+    config = TranslationConfig(
+        id=id,
+        from_language=from_language,
+        to_language=to_langauge,
+        ollama_url=OLLAMA_URL,
+        model_name=OLLAMA_MODEL,
     )
     logger.debug(f"Configuration: {config}")
 
-    raw_content: str = get_original_translation(config)
+    raw_content: str | None = get_original_vtt(config)
 
     if raw_content is None:
         logger.error(
@@ -230,12 +248,12 @@ def run_translation_workflow(
 
     dialogue_blocks, timestamp_map = process_block_timestamps(blocks)
 
-    chunks: List[str] = group_blocks_into_chunks(
-        dialogue_blocks, config["chunk_size_chars"]
+    chunks: list[str] = group_blocks_into_chunks(
+        dialogue_blocks, config.chunk_size_chars
     )
 
     total_chunks: int = len(chunks)
-    translated_chunks_with_placeholders: List[str] = []
+    translated_chunks_with_placeholders: list[str] = []
     context_buffer: str = ""
 
     logger.debug(
@@ -248,32 +266,29 @@ def run_translation_workflow(
 
         prompt: str = build_translation_prompt(
             chunk,
-            LANGUAGES[config["from_language"]],
-            LANGUAGES[config["to_language"]],
+            LANGUAGES[config.from_language],
+            LANGUAGES[config.to_language],
             context_buffer,
         )
-        result: Optional[str] = query_ollama(
-            prompt, config["ollama_url"], config["model_name"]
-        )
+        result: str | None = query_ollama(prompt, config.ollama_url, config.model_name)
 
         if result:
             translated_chunks_with_placeholders.append(result)
-            window_size: int = config["context_window_chars"]
-            context_buffer = result[-window_size:]
+            context_buffer = result[-config.context_window_chars :]
         else:
             logger.error(f"  [!] chunk {i + 1} failed. Appending original dialogue.")
             translated_chunks_with_placeholders.append(chunk)
 
-    translated_blocks_flat: List[str] = "\n\n".join(
+    translated_blocks_flat: list[str] = "\n\n".join(
         translated_chunks_with_placeholders
     ).split("\n\n")
 
-    final_translated_blocks: List[str] = reinsert_timestamps(
+    final_translated_blocks: list[str] = reinsert_timestamps(
         translated_blocks_flat, timestamp_map
     )
 
-    save_vtt_file(config["output_file"], header, final_translated_blocks)
-    logger.info(f"--- Process Complete. Saved to {config['output_file']} ---")
+    save_vtt_file(config.output_file, header, final_translated_blocks)
+    logger.info(f"--- Process Complete. Saved to {config.output_file} ---")
 
 
 if __name__ == "__main__":

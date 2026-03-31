@@ -130,9 +130,7 @@ def add_lecture_data(lecture_data):
             series_id=series_id,
             series_name=series_name,
         )
-        stmt = stmt.on_conflict_do_nothing(
-            index_elements=[SeriesDataRecord.series_id]
-        )
+        stmt = stmt.on_conflict_do_nothing(index_elements=[SeriesDataRecord.series_id])
         session.execute(stmt)
         logger.info(
             f"Upserted series data for Series ID {series_id}.",

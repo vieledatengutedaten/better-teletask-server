@@ -1,6 +1,6 @@
 import os
 
-from sqlalchemy import desc, func, select, text
+from sqlalchemy import desc, exists, func, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.db.connection import get_session
@@ -27,7 +27,7 @@ def _to_vtt_file(record: VttFileRecord) -> VttFile:
 
 
 @db_operation(success_message="Successfully queried all original VTT IDs.")
-def get_all_original_vtt_ids():
+def get_all_original_vtt_ids() -> list[int]:
     with get_session() as session:
         rows = session.execute(
             select(VttFileRecord.lecture_id).where(
@@ -40,23 +40,23 @@ def get_all_original_vtt_ids():
 
 
 @db_operation(success_message="Successfully checked whether original language exists.")
-def original_language_exists(teletaskid):
+def original_language_exists(teletaskid: int) -> bool:
     with get_session() as session:
-        count = session.execute(
-            select(func.count())
-            .select_from(VttFileRecord)
-            .where(
-                VttFileRecord.lecture_id == teletaskid,
-                VttFileRecord.is_original_lang.is_(True),
+        result = session.execute(
+            select(
+                exists().where(
+                    VttFileRecord.lecture_id == teletaskid,
+                    VttFileRecord.is_original_lang.is_(True),
+                )
             )
         ).scalar_one()
-        return count > 0
+        return result
 
 
 @db_operation(
     success_message="Successfully saved VTT/TXT as BLOB for lecture ID {teletaskid}."
 )
-def save_vtt_as_blob(teletaskid, language, isOriginalLang):
+def save_vtt_as_blob(teletaskid: int, language: str, isOriginalLang: bool):
     file_path = os.path.join(OUTPUT_PATH, str(teletaskid) + ".vtt")
     file_path_txt = os.path.join(OUTPUT_PATH, str(teletaskid) + ".txt")
     if not os.path.exists(file_path):
@@ -97,7 +97,7 @@ def save_vtt_as_blob(teletaskid, language, isOriginalLang):
 
 
 @db_operation(success_message="Successfully queried VTT file by ID.")
-def get_vtt_file_by_id(vtt_file_id) -> VttFile | None:
+def get_vtt_file_by_id(vtt_file_id: int) -> VttFile | None:
     with get_session() as session:
         record = session.execute(
             select(VttFileRecord).where(VttFileRecord.id == vtt_file_id)
@@ -109,7 +109,7 @@ def get_vtt_file_by_id(vtt_file_id) -> VttFile | None:
 
 
 @db_operation(success_message="Successfully queried VTT files by lecture ID.")
-def get_vtt_files_by_lecture_id(lecture_id) -> list[VttFile]:
+def get_vtt_files_by_lecture_id(lecture_id: int) -> list[VttFile]:
     with get_session() as session:
         records = (
             session.execute(
@@ -134,7 +134,7 @@ def get_all_vtt_blobs() -> list[VttFile]:
 
 
 @db_operation(success_message="Successfully queried original language by lecture ID.")
-def get_original_language_by_id(teletaskid):
+def get_original_language_by_id(teletaskid: int):
     with get_session() as session:
         language = session.execute(
             select(VttFileRecord.language).where(
@@ -149,7 +149,7 @@ def get_original_language_by_id(teletaskid):
 
 
 @db_operation(success_message="Successfully queried original VTT by lecture ID.")
-def get_original_vtt_by_id(teletaskid):
+def get_original_vtt_by_id(teletaskid: int):
     with get_session() as session:
         vtt_data = session.execute(
             select(VttFileRecord.vtt_data).where(
@@ -223,7 +223,7 @@ def get_missing_translations():
 @db_operation(
     success_message="Successfully queried VTT file by ID {lecture_id} and language {language}."
 )
-def get_vtt_by_id_and_lang(lecture_id, language):
+def get_vtt_by_id_and_lang(lecture_id: int, language: str):
     with get_session() as session:
         vtt_data = session.execute(
             select(VttFileRecord.vtt_data).where(

@@ -22,7 +22,7 @@ def timestamp_to_ms(timestamp: str) -> int:
 
 
 def save_vtt_lines(vtt_id: int):
-    vtt_file: VttFile = get_vtt_file_by_id(vtt_id)
+    vtt_file: VttFile | None = get_vtt_file_by_id(vtt_id)
 
     if not vtt_file:
         logger.error(f"VTT file with ID {vtt_id} not found.")

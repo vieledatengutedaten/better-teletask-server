@@ -9,9 +9,7 @@ from app.core.logger import logger
 
 
 async def verify_auth_header(authorization: str | None = Header(default=None)):
-    # works, skip for testing
     return
-
     if not authorization:
         raise HTTPException(status_code=401, detail="Missing Authorization header")
 
@@ -38,12 +36,12 @@ async def verify_auth_header(authorization: str | None = Header(default=None)):
 
 
 async def prioritize_lecture(id: int):
-    with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient() as client:
         try:
             response = await client.post(
                 f"http://localhost:8000/schedule/prioritize/{id}"
             )
-            response.raise_for_status()
+            _ = response.raise_for_status()
         except Exception as e:
             logger.error(f"Failed to prioritize subtitle: {e}")
 
@@ -65,7 +63,6 @@ async def get_subtitle(id: int, lang: str | None = None):
 
     return Response(
         content=vtt_file,
-        media_type="text/vtt",
-        charset="utf-8",
+        media_type="text/vtt; charset=utf-8",
         headers={"Access-Control-Allow-Origin": "https://www.tele-task.de"},
     )

@@ -14,8 +14,8 @@ device = DEVICE
 model = whisperx.load_model(ASR_MODEL, device=device, compute_type=COMPUTE_TYPE)
 
 
-def transcribeVideoByID(id) -> str:
-    file_path = os.path.join(INPUT_PATH, id + ".mp3")
+def transcribeVideoByID(id: int) -> str:
+    file_path = os.path.join(INPUT_PATH, str(id) + ".mp3")
 
     # fail early if input audio doesn't exist
     if not os.path.exists(file_path):
@@ -24,7 +24,7 @@ def transcribeVideoByID(id) -> str:
 
     language = None
     try:
-        language = get_language_of_lecture(int(id))
+        language = get_language_of_lecture(id)
         logger.info(f"Fetched language from database: {language}", extra={"id": id})
     except Exception as e:
         logger.warning(f"Could not fetch language from database. {e}", extra={"id": id})

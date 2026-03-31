@@ -16,34 +16,34 @@ class TestAsyncQueueBasic:
 
     @pytest.mark.asyncio
     async def test_add_and_get_all(self, queue):
-        await queue.add("a")
-        await queue.add("b")
-        assert await queue.get_all() == ["a", "b"]
+        await queue.add(1)
+        await queue.add(2)
+        assert await queue.get_all() == [1, 2]
 
     @pytest.mark.asyncio
     async def test_add_duplicates_ignored(self, queue):
-        await queue.add("a")
-        await queue.add("a")
-        assert await queue.get_all() == ["a"]
+        await queue.add(1)
+        await queue.add(1)
+        assert await queue.get_all() == [1]
 
     @pytest.mark.asyncio
     async def test_remove_existing(self, queue):
-        await queue.add("a")
-        await queue.add("b")
-        await queue.remove("a")
-        assert await queue.get_all() == ["b"]
+        await queue.add(1)
+        await queue.add(2)
+        await queue.remove(1)
+        assert await queue.get_all() == [2]
 
     @pytest.mark.asyncio
     async def test_remove_nonexistent_is_noop(self, queue):
-        await queue.add("a")
-        await queue.remove("z")
-        assert await queue.get_all() == ["a"]
+        await queue.add(1)
+        await queue.remove(99)
+        assert await queue.get_all() == [1]
 
     @pytest.mark.asyncio
     async def test_contains(self, queue):
-        await queue.add("x")
-        assert await queue.contains("x") is True
-        assert await queue.contains("y") is False
+        await queue.add(10)
+        assert await queue.contains(10) is True
+        assert await queue.contains(20) is False
 
     @pytest.mark.asyncio
     async def test_peek_empty(self, queue):
@@ -51,20 +51,20 @@ class TestAsyncQueueBasic:
 
     @pytest.mark.asyncio
     async def test_peek_nonempty(self, queue):
-        await queue.add("first")
-        await queue.add("second")
-        assert await queue.peek() == "first"
+        await queue.add(100)
+        await queue.add(200)
+        assert await queue.peek() == 100
         # peek should NOT remove the item
-        assert await queue.get_all() == ["first", "second"]
+        assert await queue.get_all() == [100, 200]
 
     @pytest.mark.asyncio
     async def test_dequeue_fifo(self, queue):
-        await queue.add("a")
-        await queue.add("b")
-        await queue.add("c")
-        assert await queue.dequeue() == "a"
-        assert await queue.dequeue() == "b"
-        assert await queue.get_all() == ["c"]
+        await queue.add(1)
+        await queue.add(2)
+        await queue.add(3)
+        assert await queue.dequeue() == 1
+        assert await queue.dequeue() == 2
+        assert await queue.get_all() == [3]
 
     @pytest.mark.asyncio
     async def test_dequeue_empty(self, queue):
@@ -72,15 +72,15 @@ class TestAsyncQueueBasic:
 
     @pytest.mark.asyncio
     async def test_replace(self, queue):
-        await queue.add("old1")
-        await queue.add("old2")
-        await queue.replace(["new1", "new2", "new3"])
-        assert await queue.get_all() == ["new1", "new2", "new3"]
+        await queue.add(1)
+        await queue.add(2)
+        await queue.replace([10, 20, 30])
+        assert await queue.get_all() == [10, 20, 30]
 
     @pytest.mark.asyncio
     async def test_replace_deduplicates(self, queue):
-        await queue.replace(["a", "b", "a", "c", "b"])
-        assert await queue.get_all() == ["a", "b", "c"]
+        await queue.replace([1, 2, 1, 3, 2])
+        assert await queue.get_all() == [1, 2, 3]
 
     @pytest.mark.asyncio
     async def test_sort_reverse(self, queue):
@@ -100,23 +100,23 @@ class TestAsyncQueueUnlockedMethods:
 
     @pytest.mark.asyncio
     async def test_add_unlocked(self, queue):
-        await queue.add_unlocked("x")
-        assert await queue.get_all() == ["x"]
+        await queue.add_unlocked(10)
+        assert await queue.get_all() == [10]
 
     @pytest.mark.asyncio
     async def test_remove_unlocked(self, queue):
-        await queue.add_unlocked("a")
-        await queue.add_unlocked("b")
-        await queue.remove_unlocked("a")
-        assert await queue.get_all() == ["b"]
+        await queue.add_unlocked(1)
+        await queue.add_unlocked(2)
+        await queue.remove_unlocked(1)
+        assert await queue.get_all() == [2]
 
     @pytest.mark.asyncio
     async def test_dequeue_unlocked(self, queue):
-        await queue.add_unlocked("first")
-        await queue.add_unlocked("second")
+        await queue.add_unlocked(100)
+        await queue.add_unlocked(200)
         val = await queue.dequeue_unlocked()
-        assert val == "first"
-        assert await queue.get_all() == ["second"]
+        assert val == 100
+        assert await queue.get_all() == [200]
 
 
 class TestMultiLock:
@@ -124,13 +124,13 @@ class TestMultiLock:
     async def test_multi_lock_acquires_all(self):
         q1 = AsyncQueue()
         q2 = AsyncQueue()
-        await q1.add("a")
-        await q2.add("b")
+        await q1.add(1)
+        await q2.add(2)
 
         async with multi_lock([q1, q2]):
             # Inside multi_lock, we use unlocked methods
-            await q1.add_unlocked("c")
-            await q2.remove_unlocked("b")
+            await q1.add_unlocked(3)
+            await q2.remove_unlocked(2)
 
-        assert await q1.get_all() == ["a", "c"]
+        assert await q1.get_all() == [1, 3]
         assert await q2.get_all() == []

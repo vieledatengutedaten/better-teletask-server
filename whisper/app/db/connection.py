@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from typing import Iterator
+from collections.abc import Iterator
 from urllib.parse import quote_plus
 
 from sqlalchemy import create_engine

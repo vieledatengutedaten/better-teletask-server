@@ -8,7 +8,7 @@ import ffmpeg
 from app.core.config import INPUT_PATH, OUTPUT_PATH
 
 
-def downloadMP4(url, id):
+def downloadMP4(url: str, id: int):
     try:
         mp4_response = requests.get(url, stream=True, verify="chain.pem")
         mp4_response.raise_for_status()

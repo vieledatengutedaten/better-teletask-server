@@ -10,7 +10,7 @@ from app.db.vtt_files import save_vtt_as_blob
 from requests.models import HTTPError
 
 
-def transcribePipelineVideoByID(id):
+def transcribePipelineVideoByID(id: int):
     # lazyload whisper here to avoid the annoying waiting time
     from app.services.whisper_asr import transcribeVideoByID
 
@@ -42,13 +42,13 @@ def transcribePipelineVideoByID(id):
                 return -1
 
         try:
-            language = transcribeVideoByID(str(id))
+            language = transcribeVideoByID(id)
         except FileNotFoundError as e:
             logger.error(f"ERROR: Could not transcribe video {e}.", extra={"id": id})
             return -1
 
         try:
-            save_vtt_as_blob(id, language, True)
+            _ = save_vtt_as_blob(id, language, True)
         except Exception as e:
             logger.error(f"Could not save VTT to database {e}.", extra={"id": id})
             return -1

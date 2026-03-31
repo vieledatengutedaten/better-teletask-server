@@ -12,3 +12,6 @@ We use pytest, either run `uv run pytest` or `pytest`
 
 ## Running
 Run the main server with `uv run uvicorn api.main:app --reload` for hot reloading
+
+## Linter
+Based Pyright

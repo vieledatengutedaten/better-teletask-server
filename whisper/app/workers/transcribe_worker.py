@@ -1,5 +1,5 @@
 import asyncio
-from typing import Optional
+
 
 from app.db.vtt_files import original_language_exists
 from app.services.scraper import pingVideoByID
@@ -16,7 +16,7 @@ from app.workers.queues import (
 from app.core.logger import logger
 
 
-async def get_id_for_worker() -> Optional[int]:
+async def get_id_for_worker() -> int | None:
     """Get the next ID to process from the queues in order of priority."""
     logger.info("Getting ID for worker...")
     id = None
@@ -76,7 +76,7 @@ async def transcribe_worker():
             logger.info(f"Transcribing ID: {id}")
             try:
                 logger.debug(f"Starting transcription for ID {id} in separate thread.")
-                await asyncio.to_thread(transcribePipelineVideoByID, str(id))
+                await asyncio.to_thread(transcribePipelineVideoByID, id)
             except Exception as e:
                 logger.error(f"Transcription failed for ID {id}: {e}")
         else:
