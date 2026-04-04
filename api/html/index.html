@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="de">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>better tele-task</title>
+	<style>
+    :root {
+      --bg: #f7f8fa;
+      --surface: #ffffff;
+      --text: #20242b;
+      --muted: #5a6270;
+      --line: #d9dee7;
+      --primary: #de6106;
+      --radius: 14px;
+      --shadow: 0 14px 30px rgba(20, 25, 34, 0.08);
+      --maxw: 860px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top right, rgba(222, 97, 6, 0.08), transparent 40%),
+        linear-gradient(180deg, #fbfcfe 0%, var(--bg) 100%);
+      line-height: 1.65;
+      padding: 40px 20px 60px;
+    }
+
+    main {
+      max-width: var(--maxw);
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: clamp(22px, 4vw, 42px);
+    }
+
+    h1, h2, h3, h4 {
+      margin: 0;
+      color: #11151b;
+      line-height: 1.3;
+      letter-spacing: 0.01em;
+    }
+
+    h1 {
+      font-size: clamp(1.9rem, 3.3vw, 2.4rem);
+      margin-bottom: 1.3rem;
+      padding-bottom: 0.7rem;
+      border-bottom: 2px solid rgba(222, 97, 6, 0.22);
+    }
+
+    h2 {
+      font-size: clamp(1.35rem, 2.3vw, 1.6rem);
+      margin-top: 1.8rem;
+      margin-bottom: 0.8rem;
+      color: #1f242d;
+    }
+
+    h3 {
+      font-size: 1.12rem;
+      margin-top: 1.25rem;
+      margin-bottom: 0.45rem;
+    }
+
+    h4 {
+      font-size: 1rem;
+      margin-top: 1rem;
+      margin-bottom: 0.4rem;
+      color: #2a313d;
+    }
+
+    p {
+      margin: 0.5rem 0 1rem;
+      color: var(--muted);
+    }
+
+    a {color: var(--primary);}
+
+    .button {
+			display: inline-block;
+			font-size: 1rem;
+			text-decoration: none;
+			color: var(--primary);
+			border: 1px solid rgba(222, 97, 6, 0.34);
+			background: #fff7f1;
+			border-radius: 10px;
+			padding: 10px 14px;
+			transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+		}
+
+		.button:hover,
+		.button:focus-visible {
+			background: #ffefe4;
+			border-color: rgba(222, 97, 6, 0.6);
+			transform: translateY(-1px);
+			outline: none;
+		}
+
+    ul {
+      margin: 0.35rem 0 1.15rem;
+      padding-left: 1.3rem;
+      color: var(--muted);
+    }
+
+    li + li {
+      margin-top: 0.42rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.65rem 0 1.35rem;
+      background: #fffdfb;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+      display: block;
+      overflow-x: auto;
+    }
+
+    th,
+    td {
+      text-align: left;
+      vertical-align: top;
+      padding: 11px 12px;
+      border-bottom: 1px solid #e8ecf2;
+      min-width: 220px;
+    }
+
+    th {
+      background: #fff6ef;
+      color: #2a2f39;
+      font-weight: 600;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 18px 12px 28px;
+      }
+
+      main {
+        border-radius: 10px;
+        padding: 18px 14px 24px;
+      }
+
+      th,
+      td {
+        min-width: 190px;
+        padding: 9px 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+	<main>
+		<h1>better tele-task</h1>
+    <p>Better Tele-Task (BTT) is a project by HPI students who love Tele-Task but are sometimes also annoyed by it.</p>
+    <h2>What we do</h2>
+    <h3>Subtitles</h3>
+    <p>BTT adds subtitles to Tele-Task videos. These subtitles are generated using publicly available deep-learning-based automatic speech recognition models. Our browser extension fetches subtitles for the video you're currently watching.</p>
+    <p>Both subtitle generation and storage take place locally on our own server. We do not use your device's resources or any cloud services.</p>
+    <h3>Player tweaks</h3>
+    <p>BTT also adds some quality-of-life features to the Tele-Task player to make it more convenient to use:</p>
+    <ul>
+    <li>Double-clicks on the video player toggle fullscreen</li>
+    <li>You can resize both of the videos (camera and screen recording) to 100% width, effectively allowing a fullscreen view of one of the videos</li>
+    <li>Pressing the dedicated play/pause key or "k" on your keyboard pauses/plays the video</li>
+    </ul>
+    <h2>Source Code & Instructions</h2>
+    <p>For the source code and installation instructions please visit our <a href="https://github.com/vieledatengutedaten/better-teletask-extension">GitHub repository</a>.</p>
+    <footer>
+      <a class="button" href="legal">Impressum & Datenschutz</a>
+    </footer>
+	</main>
+</body>
+</html>
