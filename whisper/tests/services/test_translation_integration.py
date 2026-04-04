@@ -162,9 +162,9 @@ class TestOllamaTranslation:
         output_blocks = saved_output["content"].split("\n\n")
 
         # Input had 3 subtitle blocks, output should too
-        assert len(output_blocks) == 3, (
-            f"Expected 3 output blocks, got {len(output_blocks)}"
-        )
+        assert (
+            len(output_blocks) == 3
+        ), f"Expected 3 output blocks, got {len(output_blocks)}"
 
         # All timestamps must be reinserted (not placeholders)
         for block in output_blocks:
@@ -172,4 +172,3 @@ class TestOllamaTranslation:
             assert not any(
                 f"TS{i}" in block for i in range(10)
             ), f"Placeholder not replaced in block: {block}"
-

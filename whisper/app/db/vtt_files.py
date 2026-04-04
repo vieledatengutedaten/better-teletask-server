@@ -1,5 +1,3 @@
-import os
-
 from sqlalchemy import desc, exists, func, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
@@ -57,26 +55,23 @@ def original_language_exists(teletaskid: int) -> bool:
     success_message="Successfully saved VTT/TXT as BLOB for lecture ID {teletaskid}."
 )
 def save_vtt_as_blob(teletaskid: int, language: str, isOriginalLang: bool):
-    file_path = os.path.join(OUTPUT_PATH, str(teletaskid) + ".vtt")
-    file_path_txt = os.path.join(OUTPUT_PATH, str(teletaskid) + ".txt")
-    if not os.path.exists(file_path):
+    file_path = OUTPUT_PATH / f"{teletaskid}.vtt"
+    file_path_txt = OUTPUT_PATH / f"{teletaskid}.txt"
+    if not file_path.exists():
         logger.error(
             f"VTT file not found, cant put in database: {file_path}",
             extra={"id": teletaskid},
         )
         return -1
-    if not os.path.exists(file_path_txt):
+    if not file_path_txt.exists():
         logger.error(
             f"TXT file not found, cant put in database: {file_path_txt}",
             extra={"id": teletaskid},
         )
         return -1
     with get_session() as session:
-        with open(file_path, "rb") as f:
-            vtt_binary_data = f.read()
-
-        with open(file_path_txt, "rb") as f:
-            txt_binary_data = f.read()
+        vtt_binary_data = file_path.read_bytes()
+        txt_binary_data = file_path_txt.read_bytes()
 
         stmt = (
             pg_insert(VttFileRecord)

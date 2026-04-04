@@ -4,7 +4,6 @@ from app.core.logger import logger
 logger.propagate = False
 
 import whisperx
-import os
 from whisperx.utils import get_writer
 
 from app.core.config import ASR_MODEL, COMPUTE_TYPE, INPUT_PATH, OUTPUT_PATH, DEVICE
@@ -15,10 +14,10 @@ model = whisperx.load_model(ASR_MODEL, device=device, compute_type=COMPUTE_TYPE)
 
 
 def transcribeVideoByID(id: int) -> str:
-    file_path = os.path.join(INPUT_PATH, str(id) + ".mp3")
+    file_path = INPUT_PATH / f"{id}.mp3"
 
     # fail early if input audio doesn't exist
-    if not os.path.exists(file_path):
+    if not file_path.exists():
         logger.error(f"input audio file not found: {file_path}", extra={"id": id})
         raise FileNotFoundError(f"input audio file not found: {file_path}")
 
@@ -67,7 +66,7 @@ def transcribeVideoByID(id: int) -> str:
     # Add language back to aligned result for the writer
     aligned_result["language"] = language
 
-    os.makedirs(OUTPUT_PATH, exist_ok=True)
+    OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
 
     # Save as a VTT file
     vtt_writer = get_writer("vtt", OUTPUT_PATH)

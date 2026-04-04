@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())
@@ -16,13 +17,11 @@ COMPUTE_TYPE = os.environ.get("COMPUTE_TYPE")
 DEVICE = os.environ.get("DEVICE", "cuda")
 
 # --- Paths ---
-SCRIPT_DIR = os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
+SCRIPT_DIR = Path(__file__).resolve().parent.parent.parent
 VTT_DEST_FOLDER = os.environ.get("VTT_DEST_FOLDER", "output/")
 RECORDING_SOURCE_FOLDER = os.environ.get("RECORDING_SOURCE_FOLDER", "input/")
-INPUT_PATH = os.path.join(SCRIPT_DIR, RECORDING_SOURCE_FOLDER)
-OUTPUT_PATH = os.path.join(SCRIPT_DIR, VTT_DEST_FOLDER)
+INPUT_PATH = SCRIPT_DIR / RECORDING_SOURCE_FOLDER
+OUTPUT_PATH = SCRIPT_DIR / VTT_DEST_FOLDER
 
 # --- Auth ---
 USERNAME_COOKIE = os.environ.get("USERNAME_COOKIE")

@@ -1,4 +1,3 @@
-import os
 import requests
 from app.core.logger import logger
 import logging
@@ -13,7 +12,7 @@ def downloadMP4(url: str, id: int):
         mp4_response = requests.get(url, stream=True, verify="chain.pem")
         mp4_response.raise_for_status()
         total_size = int(mp4_response.headers.get("content-length", 0))
-        dest = INPUT_PATH + str(id) + ".mp4"
+        dest = INPUT_PATH / f"{id}.mp4"
         with open(dest, "wb") as f, tqdm(
             desc="Downloading " + dest,
             total=total_size,
@@ -49,15 +48,15 @@ def convert_to_mp3(source, out_mp3):
 
 def remove_all_id_files(id):
     """Remove all temporary files (vtt, txt, mp3, mp4) for a given ID."""
-    vtt_path = os.path.join(OUTPUT_PATH, str(id) + ".vtt")
-    txt_path = os.path.join(OUTPUT_PATH, str(id) + ".txt")
-    mp3_path = os.path.join(INPUT_PATH, str(id) + ".mp3")
-    mp4_path = os.path.join(INPUT_PATH, str(id) + ".mp4")
+    vtt_path = OUTPUT_PATH / f"{id}.vtt"
+    txt_path = OUTPUT_PATH / f"{id}.txt"
+    mp3_path = INPUT_PATH / f"{id}.mp3"
+    mp4_path = INPUT_PATH / f"{id}.mp4"
 
     for file_path in [vtt_path, txt_path, mp3_path, mp4_path]:
-        if os.path.exists(file_path):
+        if file_path.exists():
             try:
-                os.remove(file_path)
+                file_path.unlink()
                 logger.info(f"Removed file: {file_path}")
             except Exception as e:
                 logger.error(f"Error removing file {file_path}: {e}")

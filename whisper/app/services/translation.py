@@ -1,11 +1,11 @@
 import requests
-import os
 import re
 
 from typing import Any
 
 from pydantic import BaseModel, computed_field
 
+from pathlib import Path
 from app.core.config import OLLAMA_URL, OLLAMA_MODEL, OUTPUT_PATH
 from app.db.vtt_files import get_original_vtt_by_id, get_original_language_by_id
 
@@ -33,13 +33,13 @@ class TranslationConfig(BaseModel):
 
     @computed_field
     @property
-    def input_file(self) -> str:
-        return f"{OUTPUT_PATH}{self.id}.vtt"
+    def input_file(self) -> Path:
+        return OUTPUT_PATH / f"{self.id}.vtt"
 
     @computed_field
     @property
-    def output_file(self) -> str:
-        return f"{OUTPUT_PATH}{self.id}{self.to_language}.vtt"
+    def output_file(self) -> Path:
+        return OUTPUT_PATH / f"{self.id}{self.to_language}.vtt"
 
 
 def get_original_vtt(config: TranslationConfig) -> str | None:
@@ -62,13 +62,12 @@ def get_original_vtt(config: TranslationConfig) -> str | None:
     return None
 
 
-def read_file_content(file_path: str) -> str:
+def read_file_content(file_path: Path) -> str:
     """Reads the entire content of a text file."""
-    if not os.path.exists(file_path):
+    if not file_path.exists():
         raise FileNotFoundError(f"Input file '{file_path}' not found.")
 
-    with open(file_path, "r", encoding="utf-8") as f:
-        return f.read()
+    return file_path.read_text(encoding="utf-8")
 
 
 def parse_vtt_blocks(raw_content: str) -> tuple[str, list[str]]:
@@ -200,13 +199,12 @@ def reinsert_timestamps(
     ]
 
 
-def save_vtt_file(file_path: str, header: str, content_blocks: list[str]) -> None:
+def save_vtt_file(file_path: Path, header: str, content_blocks: list[str]) -> None:
     """Assembles blocks, prepends the header, and writes the final VTT file."""
     translated_content: str = "\n\n".join(content_blocks)
     final_output: str = f"{header}\n\n{translated_content}"
 
-    with open(file_path, "w", encoding="utf-8") as f:
-        _ = f.write(final_output)
+    file_path.write_text(final_output, encoding="utf-8")
 
 
 def run_translation_workflow(

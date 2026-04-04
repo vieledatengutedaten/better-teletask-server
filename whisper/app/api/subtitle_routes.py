@@ -39,7 +39,7 @@ async def prioritize_lecture(id: int):
     async with httpx.AsyncClient() as client:
         try:
             response = await client.post(
-                f"http://localhost:8000/schedule/prioritize/{id}"
+                f"http://localhost:8000/schedule/prioritize/{id}" #TODO parameterize host and port
             )
             _ = response.raise_for_status()
         except Exception as e:

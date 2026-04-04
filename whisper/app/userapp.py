@@ -9,6 +9,7 @@ from app.api.scheduling_routes import schedule_router
 # setup logging — must be imported before other modules to configure handlers
 from app.core.logger import logger
 
+
 app = FastAPI()
 
 app.include_router(router=subtitle_router, prefix="/subtitle")
