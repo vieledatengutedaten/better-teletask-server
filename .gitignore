@@ -10,3 +10,4 @@ crawl_results.txt
 *.log
 *.log.*
 *.pem
+requests.md
