@@ -57,7 +57,7 @@ stream_handler.setFormatter(formatter)
 root_logger.addHandler(stream_handler)
 
 access_logger = logging.getLogger("btt_access_logger")
-access_logger.setLevel(logging.INFO)
+access_logger.setLevel(logging.DEBUG)
 access_logger.propagate = False  # Prevent duplicate logging to Python's root logger
 rotating_file_handler = TimedRotatingFileHandler(
     LOG_FILE_PATH / "access.log",
@@ -67,6 +67,8 @@ rotating_file_handler = TimedRotatingFileHandler(
     interval=1,
     utc=True,
 )
+
+access_logger.addHandler(rotating_file_handler)
 
 logger = logging.getLogger("btt_root_logger")
 

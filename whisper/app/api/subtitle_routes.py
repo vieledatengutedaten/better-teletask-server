@@ -1,38 +1,9 @@
 from app.db.vtt_files import get_vtt_by_id_and_lang
 from app.db.vtt_files import get_original_vtt_by_id
-from fastapi import APIRouter, Header, HTTPException, Depends, Response
-from datetime import datetime
-from app import db
+from fastapi import APIRouter, HTTPException, Response
 import httpx
 
 from app.core.logger import logger
-
-
-async def verify_auth_header(authorization: str | None = Header(default=None)):
-    return
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Missing Authorization header")
-
-    token = authorization.replace("Bearer ", "").strip()
-    if not token:
-        raise HTTPException(status_code=401, detail="Invalid Authorization header")
-
-    api_key = db.get_api_key_by_key(token)
-    if not api_key:
-        raise HTTPException(status_code=401, detail="Invalid API key")
-
-    if api_key.status == "revoked":
-        raise HTTPException(status_code=403, detail="API key has been revoked")
-    elif api_key.status == "expired":
-        raise HTTPException(status_code=403, detail="API key has expired")
-    elif api_key.status != "active":
-        raise HTTPException(status_code=403, detail="API key is not active")
-
-    if (
-        api_key.expiration_date
-        and api_key.expiration_date.replace(tzinfo=None) < datetime.now()
-    ):
-        raise HTTPException(status_code=403, detail="API key has expired")
 
 
 async def prioritize_lecture(id: int):
@@ -46,7 +17,7 @@ async def prioritize_lecture(id: int):
             logger.error(f"Failed to prioritize subtitle: {e}")
 
 
-subtitle_router = APIRouter(dependencies=[Depends(verify_auth_header)])
+subtitle_router = APIRouter()
 
 
 @subtitle_router.get("/{id}")
@@ -64,5 +35,4 @@ async def get_subtitle(id: int, lang: str | None = None):
     return Response(
         content=vtt_file,
         media_type="text/vtt; charset=utf-8",
-        headers={"Access-Control-Allow-Origin": "https://www.tele-task.de"},
     )

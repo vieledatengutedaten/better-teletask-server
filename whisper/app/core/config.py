@@ -26,6 +26,12 @@ OUTPUT_PATH = SCRIPT_DIR / VTT_DEST_FOLDER
 # --- Auth ---
 USERNAME_COOKIE = os.environ.get("USERNAME_COOKIE")
 
+# --- Middleware ---
+CORS_ORIGINS = [
+    h.strip() for h in os.environ.get("CORS_ORIGINS", "https://www.tele-task.de").split(",")
+]
+HTTPS_REDIRECT = os.environ.get("HTTPS_REDIRECT", "false").lower() == "true"
+
 # --- URLs ---
 BASE_URL = "https://www.tele-task.de/lecture/video/"
 

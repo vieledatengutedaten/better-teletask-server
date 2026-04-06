@@ -7,6 +7,6 @@ crawl_results.txt
 *.pyc
 [0-9]*.txt
 *nogit*
-backend/whisper/logs
 *.log
+*.log.*
 *.pem
