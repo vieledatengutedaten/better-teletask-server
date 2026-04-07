@@ -4,20 +4,22 @@ from requests.models import Response, HTTPError
 from bs4 import BeautifulSoup
 import json
 import os
+from pathlib import Path
 
 from app.core.config import USERNAME_COOKIE, BASE_URL
 from app.db.lectures import add_lecture_data, get_language_of_lecture
 from app.db.vtt_files import getHighestTeletaskID
 
 from app.core.logger import logger
-import logging
 
+
+CHAIN_PEM = Path(__file__).parent / "chain.pem"
 
 def fetchBody(id) -> Response:
     cookies = {"username": USERNAME_COOKIE}
     url = BASE_URL + str(id)
     logger.info("requesting " + url, extra={"id": id})
-    response = requests.get(url, cookies=cookies, verify="chain.pem")
+    response = requests.get(url, cookies=cookies, verify=str(CHAIN_PEM))
     response.raise_for_status()
     return response
 
@@ -130,18 +132,18 @@ def pingVideoByID(id) -> str:
         logger.error(f"Error fetching body: {e}", extra={"id": id})
         return ""
     if response.status_code == 200:
-        logging.info("Code 200, Video exists", extra={"id": id})
+        logger.info("Code 200, Video exists", extra={"id": id})
         return "200"
     elif response.status_code == 404:
-        logging.info("Code 404, not available yet", extra={"id": id})
+        logger.info("Code 404, not available yet", extra={"id": id})
         return "404"
     elif response.status_code == 401:
-        logging.info(
+        logger.info(
             "Code 401, not allowed, please use a session cookie", extra={"id": id}
         )
         return "401"
     elif response.status_code == 403:
-        logging.info("Code 403, access forbidden", extra={"id": id})
+        logger.info("Code 403, access forbidden", extra={"id": id})
         return "403"
 
 

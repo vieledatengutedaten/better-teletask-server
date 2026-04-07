@@ -4,6 +4,9 @@ from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())
 
+# --- General ---
+ENVIRONMENT: str = os.environ.get("ENVIRONMENT", "vm").lower() # dev, vm, worker
+
 # --- Database ---
 DB_NAME = os.environ.get("POSTGRES_DB")
 DB_USER = os.environ.get("POSTGRES_USER")
@@ -22,6 +25,8 @@ VTT_DEST_FOLDER = os.environ.get("VTT_DEST_FOLDER", "output/")
 RECORDING_SOURCE_FOLDER = os.environ.get("RECORDING_SOURCE_FOLDER", "input/")
 INPUT_PATH = SCRIPT_DIR / RECORDING_SOURCE_FOLDER
 OUTPUT_PATH = SCRIPT_DIR / VTT_DEST_FOLDER
+INPUT_PATH.mkdir(parents=True, exist_ok=True)
+OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
 
 # --- Auth ---
 USERNAME_COOKIE = os.environ.get("USERNAME_COOKIE")

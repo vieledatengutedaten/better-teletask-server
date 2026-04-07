@@ -1,11 +1,11 @@
 from app.core.logger import logger
-import logging
 
 from app.core.config import INPUT_PATH
 from app.services.scraper import fetchBody, fetchMP4, fetchLecture
 from app.services.downloader import downloadMP4, convert_to_mp3, remove_all_id_files
 from app.db.lectures import get_language_of_lecture
 from app.db.vtt_files import save_vtt_as_blob
+from app.db.migrations import initDatabase
 
 from requests.models import HTTPError
 
@@ -17,22 +17,22 @@ def transcribePipelineVideoByID(id: int):
     url = fetchLecture(str(id))
 
     if url == "":
-        logging.error("No mp4 URL found, cannot transcribe", extra={"id": id})
+        logger.error("No mp4 URL found, cannot transcribe", extra={"id": id})
         return -1
     else:
         try:
-            logging.info(
+            logger.info(
                 f"Trying to directly convert to mp3 from URL: {url}", extra={"id": id}
             )
-            convert_to_mp3(url, INPUT_PATH + str(id) + ".mp3")
+            convert_to_mp3(url, str(INPUT_PATH / f"{id}.mp3"))  # intentional bug
         except Exception as e:
-            logging.error(
-                f"Trying to download mp4 and convert locally: {e}", extra={"id": id}
+            logger.error(
+                f"Trying to download mp4 and convert locally: {e}", extra={"id": id}, exc_info=True
             )
             try:
                 downloadMP4(url, id)
                 convert_to_mp3(
-                    INPUT_PATH + str(id) + ".mp4", INPUT_PATH + str(id) + ".mp3"
+                    str(INPUT_PATH / f"{id}.mp4"), str(INPUT_PATH / f"{id}.mp3")
                 )
             except Exception as e2:
                 logger.error(

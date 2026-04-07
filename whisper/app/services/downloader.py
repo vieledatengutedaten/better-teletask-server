@@ -1,20 +1,23 @@
+from pathlib import Path
+
 import requests
 from app.core.logger import logger
-import logging
 from tqdm import tqdm
 import ffmpeg
 
 from app.core.config import INPUT_PATH, OUTPUT_PATH
 
+CHAIN_PEM = Path(__file__).parent / "chain.pem"
+
 
 def downloadMP4(url: str, id: int):
     try:
-        mp4_response = requests.get(url, stream=True, verify="chain.pem")
+        mp4_response = requests.get(url, stream=True, verify=str(CHAIN_PEM))
         mp4_response.raise_for_status()
         total_size = int(mp4_response.headers.get("content-length", 0))
         dest = INPUT_PATH / f"{id}.mp4"
         with open(dest, "wb") as f, tqdm(
-            desc="Downloading " + dest,
+            desc=f"Downloading {dest}",
             total=total_size,
             unit="B",
             unit_scale=True,
@@ -23,9 +26,9 @@ def downloadMP4(url: str, id: int):
             for chunk in mp4_response.iter_content(chunk_size=8192):
                 f.write(chunk)
                 bar.update(len(chunk))
-        logging.info("Download complete:" + dest, extra={"id": id})
+        logger.info(f"Download complete: {dest}", extra={"id": id})
     except Exception as e:
-        logging.error(f"Error downloading mp4: {e}", extra={"id": id})
+        logger.error(f"Error downloading mp4: {e}", extra={"id": id})
         raise
 
 
