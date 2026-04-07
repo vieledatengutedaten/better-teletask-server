@@ -1,7 +1,7 @@
 from app.core.logger import logger
 
 from app.core.config import INPUT_PATH
-from app.services.scraper import fetchBody, fetchMP4, fetchLecture
+from app.services.lecture_service import get_mp4_url_and_ensure_lecture_data
 from app.services.downloader import downloadMP4, convert_to_mp3, remove_all_id_files
 from app.db.lectures import get_language_of_lecture
 from app.db.vtt_files import save_vtt_as_blob
@@ -14,7 +14,7 @@ def transcribePipelineVideoByID(id: int):
     # lazyload whisper here to avoid the annoying waiting time
     from app.services.whisper_asr import transcribeVideoByID
 
-    url = fetchLecture(str(id))
+    url = get_mp4_url_and_ensure_lecture_data(id)
 
     if url == "":
         logger.error("No mp4 URL found, cannot transcribe", extra={"id": id})
@@ -27,7 +27,9 @@ def transcribePipelineVideoByID(id: int):
             convert_to_mp3(url, str(INPUT_PATH / f"{id}.mp3"))  # intentional bug
         except Exception as e:
             logger.error(
-                f"Trying to download mp4 and convert locally: {e}", extra={"id": id}, exc_info=True
+                f"Trying to download mp4 and convert locally: {e}",
+                extra={"id": id},
+                exc_info=True,
             )
             try:
                 downloadMP4(url, id)

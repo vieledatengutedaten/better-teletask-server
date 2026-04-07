@@ -7,7 +7,8 @@ from app.db.api_keys import (
 )
 from app.db.vtt_files import getHighestTeletaskID, get_all_original_vtt_ids
 from app.db.lectures import get_all_lecture_ids
-from app.services.scraper import getLecturerData, fetchBody, pingVideoByID
+from app.services.scraper import fetchBody, pingVideoByID
+from app.services.lecture_service import fetch_and_store_lecture_data
 from app.core.config import BASE_URL
 
 import hashlib
@@ -99,10 +100,9 @@ def handle_scrape_missing_lecture_data(args):
 
     for lecture_id in missing_lecturer_data_ids:
         try:
-            url = BASE_URL + str(lecture_id)
             response = fetchBody(str(lecture_id))
-            lecturer_data = getLecturerData(str(lecture_id), response, url)
-            print(f"✓ Lecture ID {lecture_id}: {lecturer_data}")
+            fetch_and_store_lecture_data(lecture_id, response)
+            print(f"✓ Lecture ID {lecture_id}: stored")
         except Exception as e:
             print(f"✗ Lecture ID {lecture_id}: Error - {e}")
 

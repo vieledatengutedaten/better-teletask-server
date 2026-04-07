@@ -1,21 +1,23 @@
 """
 Tests for api/scheduling_routes.py
 
-Uses FastAPI's TestClient to make real HTTP calls against the app
-without needing a running server. Queues and external services are mocked.
+Uses FastAPI's TestClient to make HTTP calls against schedule_router.
+Queue and scheduler dependencies are mocked.
 """
 
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.api.scheduling_routes import schedule_router
+from app.models.dataclasses import TranscriptionJob, TranscriptionParams
 
 
 @pytest.fixture
 def app():
-    """Create a fresh FastAPI app with the schedule_router mounted."""
     app = FastAPI()
     app.include_router(schedule_router)
     return app
@@ -23,7 +25,6 @@ def app():
 
 @pytest.fixture
 def client(app):
-    """TestClient that speaks to the app without a real server."""
     return TestClient(app)
 
 
@@ -35,68 +36,50 @@ class TestPing:
 
 
 class TestGetQueues:
-    @patch("app.api.scheduling_routes.in_process_queue")
-    @patch("app.api.scheduling_routes.backward_queue")
-    @patch("app.api.scheduling_routes.in_between_queue")
-    @patch("app.api.scheduling_routes.forward_queue")
-    @patch("app.api.scheduling_routes.prio_queue")
-    def test_returns_all_queues(
-        self, mock_prio, mock_fwd, mock_inb, mock_bwd, mock_inp, client
-    ):
-        mock_prio.get_all = AsyncMock(return_value=[100])
-        mock_fwd.get_all = AsyncMock(return_value=[200, 201])
-        mock_inb.get_all = AsyncMock(return_value=[])
-        mock_bwd.get_all = AsyncMock(return_value=[300])
-        mock_inp.get_all = AsyncMock(return_value=[])
+    @patch("app.api.scheduling_routes.queue_manager")
+    @patch("app.api.scheduling_routes.get_scheduler")
+    def test_returns_queued_and_active_jobs(self, mock_get_scheduler, mock_queue_manager, client):
+        whisper_job = TranscriptionJob(params=TranscriptionParams(teletask_id=100))
+        active_job = TranscriptionJob(params=TranscriptionParams(teletask_id=200))
+
+        mock_queue_manager.get_all = AsyncMock(side_effect=[[whisper_job], []])
+        mock_get_scheduler.return_value = SimpleNamespace(active_jobs=[active_job])
 
         response = client.get("/queues")
         assert response.status_code == 200
-        data = response.json()
 
-        assert data["priority_queue"] == [100]
-        assert data["forward_queue"] == [200, 201]
-        assert data["in_between_queue"] == []
-        assert data["backward_queue"] == [300]
-        assert data["in_process_queue"] == []
+        data = response.json()
+        assert len(data["whisper"]) == 1
+        assert len(data["ollama"]) == 0
+        assert len(data["active"]) == 1
+        assert data["whisper"][0]["params"]["teletask_id"] == 100
+        assert data["active"][0]["params"]["teletask_id"] == 200
+
+    @patch("app.api.scheduling_routes.queue_manager")
+    @patch("app.api.scheduling_routes.get_scheduler", side_effect=RuntimeError("not initialized"))
+    def test_returns_empty_active_when_scheduler_unavailable(
+        self, _mock_get_scheduler, mock_queue_manager, client
+    ):
+        mock_queue_manager.get_all = AsyncMock(side_effect=[[], []])
+
+        response = client.get("/queues")
+        assert response.status_code == 200
+        assert response.json()["active"] == []
 
 
 class TestPrioritize:
-    @patch("app.api.scheduling_routes.multi_lock")
-    @patch("app.api.scheduling_routes.in_process_queue")
-    @patch("app.api.scheduling_routes.backward_queue")
-    @patch("app.api.scheduling_routes.in_between_queue")
-    @patch("app.api.scheduling_routes.forward_queue")
-    @patch("app.api.scheduling_routes.prio_queue")
+    @patch("app.api.scheduling_routes.queue_manager")
     @patch("app.api.scheduling_routes.pingVideoByID", return_value="200")
-    def test_prioritize_available_id(
-        self,
-        mock_ping,
-        mock_prio,
-        mock_fwd,
-        mock_inb,
-        mock_bwd,
-        mock_inp,
-        mock_multi_lock,
-        client,
-    ):
-        # Setup: ID is not in any queue
-        mock_inp.contains_unlocked = AsyncMock(return_value=False)
-        mock_prio.contains_unlocked = AsyncMock(return_value=False)
-        mock_fwd.contains_unlocked = AsyncMock(return_value=False)
-        mock_inb.contains_unlocked = AsyncMock(return_value=False)
-        mock_bwd.contains_unlocked = AsyncMock(return_value=False)
-        mock_prio.add_unlocked = AsyncMock()
-
-        # multi_lock returns an async context manager
-        mock_multi_lock.return_value.__aenter__ = AsyncMock()
-        mock_multi_lock.return_value.__aexit__ = AsyncMock(return_value=False)
+    def test_prioritize_available_id(self, _mock_ping, mock_queue_manager, client):
+        mock_queue_manager.remove_by_teletask_id = AsyncMock(return_value=[])
+        mock_queue_manager.add = AsyncMock(return_value=True)
 
         response = client.post("/prioritize/11401")
         assert response.status_code == 200
         assert "prioritized" in response.json()["message"]
 
     @patch("app.api.scheduling_routes.pingVideoByID", return_value="404")
-    def test_prioritize_unavailable_id(self, mock_ping, client):
+    def test_prioritize_unavailable_id(self, _mock_ping, client):
         response = client.post("/prioritize/99999")
         assert response.status_code == 200
         assert "not available" in response.json()["message"]

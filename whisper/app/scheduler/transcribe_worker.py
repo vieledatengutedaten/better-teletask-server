@@ -4,7 +4,7 @@ import asyncio
 from app.db.vtt_files import original_language_exists
 from app.services.scraper import pingVideoByID
 from app.services.pipeline import transcribePipelineVideoByID
-from app.workers.queues import (
+from app.scheduler.queues import (
     prio_queue,
     forward_queue,
     in_between_queue,

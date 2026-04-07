@@ -8,7 +8,6 @@ from app.middleware import register_middleware
 # setup logging — must be imported before other modules to configure handlers
 from app.core.logger import logger  # noqa: F401
 
-
 app = FastAPI()
 register_middleware(app)
 

@@ -21,7 +21,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             client = request.client
             client_ip = client.host if client else "unknown"
 
-        print(f"DAS IST PRINT {request.method} {request.url.path} {response.status_code} {duration:.3f}s from {client_ip}")
+        print(
+            f"DAS IST PRINT {request.method} {request.url.path} {response.status_code} {duration:.3f}s from {client_ip}"
+        )
         access_logger.info(
             "%s %s %s %d %.3fs",
             client_ip,

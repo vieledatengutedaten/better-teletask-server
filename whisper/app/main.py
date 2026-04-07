@@ -1,3 +1,6 @@
+from typing import Any
+
+
 import uvicorn
 import asyncio
 import contextlib
@@ -8,70 +11,63 @@ from app.core.logger import logger
 from app.db.migrations import initDatabase
 from app.db.vtt_files import getSmallestTeletaskID
 from app.db.blacklist import get_missing_available_inbetween_ids
+from app.models.dataclasses import TranscriptionJob, TranscriptionParams
 from app.services.scraper import get_upper_ids
-from app.workers.queues import (
-    prio_queue,
-    forward_queue,
-    in_between_queue,
-    backward_queue,
-)
-from app.workers.transcribe_worker import transcribe_worker
-from app.workers.queue_updaters import (
-    update_upper_ids_periodically,
-    update_inbetween_ids_periodically,
-)
+from app.scheduler.queues import queue_manager
+from app.scheduler.scheduler import Scheduler, set_scheduler
 from app.api.scheduling_routes import schedule_router
+from app.api.worker_routes import worker_router
+
+
+def _ids_to_transcription_jobs(ids: list[int]) -> list[TranscriptionJob]:
+    return [TranscriptionJob(params=TranscriptionParams(teletask_id=tid)) for tid in ids]
 
 
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
     initDatabase()
+
+    # Enqueue upper IDs (forward)
     upper_ids = get_upper_ids()
-    if upper_ids is not None:
-        await forward_queue.replace(upper_ids)
-    smallest_id = getSmallestTeletaskID()
+    if upper_ids:
+        _ = await queue_manager.add_all(
+            jobs=_ids_to_transcription_jobs(ids=upper_ids),
+            priority=True,
+        )
+
+    # Enqueue IDs below the smallest known (backward)
+    smallest_id: int | None = getSmallestTeletaskID()
     if smallest_id is not None:
-        await backward_queue.replace(list(range(smallest_id - 1, 0, -1)))
-    missing_ids = get_missing_available_inbetween_ids()
+        backward_ids = list(range(smallest_id - 1, 0, -1))
+        _ = await queue_manager.add_all(_ids_to_transcription_jobs(backward_ids))
+
+    # Enqueue missing in-between IDs
+    missing_ids: list[int] | None = get_missing_available_inbetween_ids()
     if missing_ids:
-        await in_between_queue.replace(sorted(missing_ids, reverse=True))
+        _ = await queue_manager.add_all(
+            _ids_to_transcription_jobs(sorted(missing_ids, reverse=True))
+        )
 
-    logger.info("Application startup: Queues initialized.")
-    logger.debug("Forward queue: %s", await forward_queue.get_all())
-    logger.debug("In-between queue: %s", await in_between_queue.get_all())
-    logger.debug("Backward queue: %s", await backward_queue.get_all())
+    all_jobs = await queue_manager.get_all()
+    logger.info(f"Application startup: {len(all_jobs)} transcription job(s) enqueued.")
 
-    # Start background tasks
-    transcribe_worker_task = asyncio.create_task(transcribe_worker())
-    update_upper_ids_task = asyncio.create_task(update_upper_ids_periodically())
-    update_inbetween_ids_task = asyncio.create_task(update_inbetween_ids_periodically())
-    yield  # Yield control to start the server
+    # Start scheduler
+    scheduler = Scheduler(queue_manager=queue_manager)
+    set_scheduler(scheduler)
+    scheduler_task = asyncio.create_task(scheduler.run())
+    yield
 
-    transcribe_worker_task.cancel()
+    scheduler_task.cancel()
     try:
-        await transcribe_worker_task
+        await scheduler_task
     except asyncio.CancelledError:
-        logger.error("Can not cancel transcribe worker task.")
-    logger.info("Cancelled transcribe worker task.")
-
-    update_upper_ids_task.cancel()
-    update_inbetween_ids_task.cancel()
-    try:
-        await update_upper_ids_task
-    except asyncio.CancelledError:
-        logger.error("Can not cancel update upper IDs task.")
-    logger.info("Cancelled update upper IDs task.")
-    try:
-        await update_inbetween_ids_task
-    except asyncio.CancelledError:
-        logger.error("Can not cancel update in-between IDs task.")
-    logger.info("Cancelled update in-between IDs task.")
-
+        pass
     logger.info("Application shutdown complete.")
 
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(schedule_router, prefix="/schedule")
+app.include_router(worker_router, prefix="/worker")
 
 
 if __name__ == "__main__":

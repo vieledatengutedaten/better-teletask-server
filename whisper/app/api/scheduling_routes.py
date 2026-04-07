@@ -1,33 +1,26 @@
 from fastapi import APIRouter
 
-from app.services.scraper import pingVideoByID
-from app.workers.queues import (
-    prio_queue,
-    forward_queue,
-    in_between_queue,
-    backward_queue,
-    in_process_queue,
-    multi_lock,
-)
-
 from app.core.logger import logger
+from app.models.dataclasses import TranscriptionJob, TranscriptionParams
+from app.services.scraper import pingVideoByID
+from app.scheduler.queues import queue_manager
+from app.scheduler.scheduler import get_scheduler
 
 schedule_router = APIRouter()
 
 
 @schedule_router.get("/queues")
 async def get_queues():
-    prio = await prio_queue.get_all()
-    forward = await forward_queue.get_all()
-    in_between = await in_between_queue.get_all()
-    backward = await backward_queue.get_all()
-    in_process = await in_process_queue.get_all()
+    whisper_jobs = await queue_manager.get_all("whisper")
+    ollama_jobs = await queue_manager.get_all("ollama")
+    try:
+        active_jobs = get_scheduler().active_jobs
+    except RuntimeError:
+        active_jobs = []
     return {
-        "priority_queue": prio,
-        "forward_queue": forward,
-        "in_between_queue": in_between,
-        "backward_queue": backward,
-        "in_process_queue": in_process,
+        "whisper": [j.model_dump() for j in whisper_jobs],
+        "ollama": [j.model_dump() for j in ollama_jobs],
+        "active": [j.model_dump() for j in active_jobs],
     }
 
 
@@ -36,43 +29,27 @@ async def ping_pong():
     return "pong"
 
 
-@schedule_router.post("/prioritize/{id}")
-async def prioritize_id(id: int):
-    res = pingVideoByID(str(id))
-    if res == "200":
-        async with multi_lock(
-            [
-                prio_queue,
-                forward_queue,
-                in_between_queue,
-                backward_queue,
-                in_process_queue,
-            ]
-        ):
-            if await in_process_queue.contains_unlocked(id):
-                logger.info(f"ID {id} is currently being processed; cannot prioritize.")
-                return {
-                    "message": f"ID {id} is currently being processed; cannot prioritize."
-                }
-            if await prio_queue.contains_unlocked(id):
-                logger.info(f"ID {id} is already in priority queue.")
-                return {"message": f"ID {id} was already prioritized."}
-            if await forward_queue.contains_unlocked(id):
-                await forward_queue.remove_unlocked(id)
-                logger.info(f"Removed ID {id} from forward queue for prioritization.")
-            if await in_between_queue.contains_unlocked(id):
-                await in_between_queue.remove_unlocked(id)
-                logger.info(
-                    f"Removed ID {id} from in-between queue for prioritization."
-                )
-            if await backward_queue.contains_unlocked(id):
-                await backward_queue.remove_unlocked(id)
-                logger.info(f"Removed ID {id} from backward queue for prioritization.")
-            await prio_queue.add_unlocked(id)
-            logger.info(f"Added ID {id} to priority queue.")
-            return {"message": f"ID {id} prioritized."}
-    else:
-        logger.error(
-            f"ID {id} cannot be prioritized as it is not available (response: {res})."
-        )
-        return {"message": f"ID {id} cannot be prioritized as it is not available."}
+@schedule_router.post("/prioritize/{teletask_id}")
+async def prioritize_id(teletask_id: int):
+    res = pingVideoByID(str(teletask_id))
+    if res != "200":
+        logger.error(f"ID {teletask_id} not available (response: {res}).")
+        return {"message": f"ID {teletask_id} is not available."}
+
+    # Remove from normal queues if already enqueued
+    removed = await queue_manager.remove_by_teletask_id(teletask_id)
+    if removed:
+        # Check if any were already priority or running
+        for job in removed:
+            if job.status == "RUNNING":
+                logger.info(f"ID {teletask_id} is currently being processed.")
+                return {"message": f"ID {teletask_id} is currently being processed."}
+
+    job = TranscriptionJob(params=TranscriptionParams(teletask_id=teletask_id))
+    added = await queue_manager.add(job, priority=True)
+    if not added:
+        logger.info(f"ID {teletask_id} already in priority queue.")
+        return {"message": f"ID {teletask_id} was already prioritized."}
+
+    logger.info(f"ID {teletask_id} prioritized.")
+    return {"message": f"ID {teletask_id} prioritized."}

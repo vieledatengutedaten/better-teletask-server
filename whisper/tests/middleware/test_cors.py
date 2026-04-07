@@ -109,9 +109,10 @@ class TestPreflightAllowed:
             },
         )
         assert response.status_code == 200
-        assert "authorization" in response.headers.get(
-            "access-control-allow-headers", ""
-        ).lower()
+        assert (
+            "authorization"
+            in response.headers.get("access-control-allow-headers", "").lower()
+        )
 
 
 class TestPreflightDisallowed:

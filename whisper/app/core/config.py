@@ -5,7 +5,7 @@ from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv())
 
 # --- General ---
-ENVIRONMENT: str = os.environ.get("ENVIRONMENT", "vm").lower() # dev, vm, worker
+ENVIRONMENT: str = os.environ.get("ENVIRONMENT", "vm").lower()  # dev, vm, worker
 
 # --- Database ---
 DB_NAME = os.environ.get("POSTGRES_DB")
@@ -33,7 +33,8 @@ USERNAME_COOKIE = os.environ.get("USERNAME_COOKIE")
 
 # --- Middleware ---
 CORS_ORIGINS = [
-    h.strip() for h in os.environ.get("CORS_ORIGINS", "https://www.tele-task.de").split(",")
+    h.strip()
+    for h in os.environ.get("CORS_ORIGINS", "https://www.tele-task.de").split(",")
 ]
 HTTPS_REDIRECT = os.environ.get("HTTPS_REDIRECT", "false").lower() == "true"
 

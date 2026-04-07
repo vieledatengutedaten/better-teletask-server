@@ -1,8 +1,10 @@
 from datetime import date as dt_date, datetime as dt_datetime, timedelta as dt_timedelta
+from typing import Literal, TypeAlias, override
+import uuid
 
-
+from sqlalchemy.engine import url
 import webvtt
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class SeriesData(BaseModel):
@@ -89,3 +91,101 @@ class SearchResult(BaseModel):
     ts_end: int
     content: str
     similarity: float
+
+
+# --- Job scheduling models ---
+
+Language: TypeAlias = Literal["en", "de", "original"]
+
+
+class JobResult(BaseModel):
+    job_id: str
+    success: bool
+    message: str | None = None
+    batch_size: int | None = None
+    no_in_batch: int | None = None
+
+
+class TranscriptionParams(BaseModel):
+    teletask_id: int
+    initial_prompt: str | None = None
+
+
+class TranscriptionResult(JobResult):
+    language: str | None = None
+    vtt_data: str | None = None
+    txt_data: str | None = None
+
+examplejson = {
+    "job_id": "tc-1234abcd",
+    "success": True,
+    "message": "Transcription completed successfully.",
+    "language": "en",
+    "vtt_data": "WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nHello, world!\n",
+    "txt_data": "Hello, world!",
+}
+
+class TranslationParams(BaseModel):
+    teletask_id: int
+    from_language: str
+    to_language: str
+    additional_prompt: str | None = None
+
+
+class TranslationResult(JobResult):
+    vtt_data: str | None = None
+    txt_data: str | None = None
+
+
+SLURMWorkerStatuses: TypeAlias = Literal[
+    "PENDING",
+    "RUNNING",
+    "PREEMPTED",
+    "DEADLINE",
+    "TIMEOUT",
+    "SUSPENDED",
+    "COMPLETED",
+    "CANCELLED",
+    "FAILED",
+]
+
+LogLevel: TypeAlias = Literal["debug", "info", "warning", "error", "critical"]
+
+SchedulerStatuses: TypeAlias = Literal["RUNNING", "COMPLETED", "FAILED", "ENQUEUED"]
+
+
+JobType: TypeAlias = Literal["transcription", "translation"]
+
+
+class BaseJob(BaseModel):
+    id: str = ""
+    job_type: JobType  # subclasses must set a default
+    status: SchedulerStatuses = "ENQUEUED"
+    created_at: dt_datetime = Field(default_factory=dt_datetime.now)
+
+
+class TranscriptionJob(BaseJob):
+    job_type: JobType = "transcription"
+    params: TranscriptionParams
+
+    @override
+    def model_post_init(self, __context: object) -> None:
+        if not self.id:
+            self.id: str = f"tc-{self.params.teletask_id}-{uuid.uuid4().hex[:8]}"
+
+
+class TranslationJob(BaseJob):
+    job_type: JobType = "translation"
+    params: TranslationParams
+
+    @override
+    def model_post_init(self, __context: object) -> None:
+        if not self.id:
+            self.id: str = (
+                f"tl-{self.params.teletask_id}-{self.params.from_language}-{self.params.to_language}-{uuid.uuid4().hex[:8]}"
+            )
+
+
+Job: TypeAlias = TranscriptionJob | TranslationJob
+
+ResourceCategory: TypeAlias = Literal["whisper", "ollama"]

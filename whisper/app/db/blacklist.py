@@ -36,7 +36,7 @@ def get_blacklisted_ids():
 
 
 @db_operation(success_message="Successfully computed available missing in-between IDs.")
-def get_missing_available_inbetween_ids():
+def get_missing_available_inbetween_ids() -> list[int] | None:
     initial_ids = get_missing_inbetween_ids()
     blacklisted_ids = get_blacklisted_ids()
     if initial_ids is None:

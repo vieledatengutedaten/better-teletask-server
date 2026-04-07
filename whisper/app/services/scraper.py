@@ -1,4 +1,5 @@
 import re
+from typing import Any
 import requests
 from requests.models import Response, HTTPError
 from bs4 import BeautifulSoup
@@ -6,14 +7,15 @@ import json
 import os
 from pathlib import Path
 
+from sqlalchemy.sql import elements
+
 from app.core.config import USERNAME_COOKIE, BASE_URL
-from app.db.lectures import add_lecture_data, get_language_of_lecture
 from app.db.vtt_files import getHighestTeletaskID
 
 from app.core.logger import logger
 
-
 CHAIN_PEM = Path(__file__).parent / "chain.pem"
+
 
 def fetchBody(id) -> Response:
     cookies = {"username": USERNAME_COOKIE}
@@ -145,16 +147,22 @@ def pingVideoByID(id) -> str:
     elif response.status_code == 403:
         logger.info("Code 403, access forbidden", extra={"id": id})
         return "403"
+    else:
+        logger.warning(
+            f"Received unexpected status code {response.status_code} when pinging video.",
+            extra={"id": id},
+        )
+        return str(response.status_code)
 
 
-def get_upper_ids():
-    ids = []
-    unreachable_ids = []
-    highest = getHighestTeletaskID()
+def get_upper_ids() -> list[int]:
+    ids: list[int] = []
+    unreachable_ids: list[int] = []
+    highest: int | None = getHighestTeletaskID()
     if highest is None:
         return ids
     highest = highest + 1
-    for i in range(10):
+    for i in range(1, 10):
         res = pingVideoByID(str(highest + i))
         if res == "200":
             ids.append(highest + i)
@@ -167,92 +175,82 @@ def get_upper_ids():
             logger.warning(
                 f"Received {res} for ID {highest + i}.", extra={"id": highest + i}
             )
-            unreachable_ids.append(res)
+            unreachable_ids.append(highest+i)
     return ids
 
 
-def fetchLecture(id) -> str:
-    try:
-        response = fetchBody(id)
-    except HTTPError as e:
-        logger.error(f"Error fetching body:{e}", extra={"id": id})
-        return ""
+def scrape_mp4_url_from_teletaskid(id, response=None) -> str:
+    """Scrape the mp4 URL for a teletask ID. Pure scraping, no DB access."""
+    if response is None:
+        try:
+            response = fetchBody(id)
+        except HTTPError as e:
+            logger.error(f"Error fetching body:{e}", extra={"id": id})
+            return ""
 
-    url = fetchMP4(id, response)
-    if get_language_of_lecture(id) is None:
-        logger.debug(
-            "No entry found for this lectures language in the databse, fetching lecture data ",
-            extra={"id": id},
-        )
-        getLecturerData(id, response, url)
-    else:
-        logger.debug("Lecturer data already exists for ID ", extra={"id": id})
-    return url
+    return fetchMP4(id, response)
 
 
-def getLecturerData(id, response, url):
+def scrape_lecture_data(
+    id: int, response: Response | None = None
+) -> dict[str, Any] | None:
     """
     Scrape lecture metadata from the tele-task page.
-    Returns: dict with lecturer_ids, date, language, duration, title, series info.
+    Returns: dict with lecturer_ids, date, language, duration, title, series info, or None on failure.
     """
-    try:
-        response = fetchBody(id)
-    except HTTPError as e:
-        logger.error("Error fetching body:", extra={"id": id})
-        return ""
+    if response is None:
+        try:
+            response = fetchBody(id)
+        except HTTPError as e:
+            logger.error("Error fetching body:", extra={"id": id})
+            return None
 
     soup = BeautifulSoup(response.text, "html.parser")
     lecture_info_div = soup.find("img", class_="box nopad lecture-img").parent
 
-    if lecture_info_div:
-        lecturer_name = lecture_info_div.get_text()
-        lecture_name = lecture_info_div.find("h3").get_text()
-        h5 = lecture_info_div.find("h5")
-        series_name = None
-        series_id = None
-        if h5:
-            a = h5.find("a", href=True)
-            if a:
-                series_name = a.get_text(strip=True)
-                m = re.search(r"/series/(\d+)", a["href"])
-                series_id = int(m.group(1)) if m else None
-
-        lectures = lecture_info_div.find_all("a", href=re.compile(r"^/lecturer/"))
-        lecturer_names = []
-        lecturer_ids = []
-        for lect in lectures:
-            lecturer_names.append(lect.get_text(strip=True))
-            m = re.search(r"/lecturer/(\d+)", lect["href"])
-            lecturer_ids.append(int(m.group(1)) if m else None)
-        logger.debug(f"lecturer_names: {lecturer_names}")
-        logger.debug(f"lecturer_ids: {lecturer_ids}")
-        logger.debug(f"lectures: {lectures}")
-
-        inner = lecture_info_div.decode_contents()
-
-        def find_field(label):
-            m = re.search(rf"{re.escape(label)}:\s*(.*?)\s*<br", inner, re.I | re.S)
-            return m.group(1).strip() if m else None
-
-        date = find_field("Date")
-        language = find_field("Language")
-        duration = find_field("Duration")
-
-        lecture_data = {
-            "lecture_id": id,
-            "lecturer_ids": lecturer_ids,
-            "lecturer_names": lecturer_names,
-            "date": date,
-            "language": language,
-            "duration": duration,
-            "lecture_title": lecture_name,
-            "series_id": series_id,
-            "series_name": series_name,
-            "url": url,
-        }
-        logger.debug(f"Fetched lecture data: {lecture_data}", extra={"id": id})
-        add_lecture_data(lecture_data)
-        return
-    else:
+    if not lecture_info_div:
         logger.error("Div not found to scrape lecture data.", extra={"id": id})
-        return
+        return None
+
+    lecture_name = lecture_info_div.find("h3").get_text()
+    h5 = lecture_info_div.find("h5")
+    series_name = None
+    series_id = None
+    if h5:
+        a = h5.find("a", href=True)
+        if a:
+            series_name = a.get_text(strip=True)
+            m = re.search(r"/series/(\d+)", a["href"])
+            series_id = int(m.group(1)) if m else None
+
+    lectures = lecture_info_div.find_all("a", href=re.compile(r"^/lecturer/"))
+    lecturer_names = []
+    lecturer_ids = []
+    for lect in lectures:
+        lecturer_names.append(lect.get_text(strip=True))
+        m = re.search(r"/lecturer/(\d+)", lect["href"])
+        lecturer_ids.append(int(m.group(1)) if m else None)
+
+    inner = lecture_info_div.decode_contents()
+
+    def find_field(label):
+        m = re.search(rf"{re.escape(label)}:\s*(.*?)\s*<br", inner, re.I | re.S)
+        return m.group(1).strip() if m else None
+
+    date = find_field("Date")
+    language = find_field("Language")
+    duration = find_field("Duration")
+
+    lecture_data = {
+        "lecture_id": id,
+        "lecturer_ids": lecturer_ids,
+        "lecturer_names": lecturer_names,
+        "date": date,
+        "language": language,
+        "duration": duration,
+        "lecture_title": lecture_name,
+        "series_id": series_id,
+        "series_name": series_name,
+    }
+    logger.debug(f"Fetched lecture data: {lecture_data}", extra={"id": id})
+    return lecture_data

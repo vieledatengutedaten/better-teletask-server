@@ -159,7 +159,7 @@ def get_original_vtt_by_id(teletaskid: int):
 
 
 @db_operation(success_message="Successfully queried highest Teletask ID.")
-def getHighestTeletaskID():
+def getHighestTeletaskID() -> int | None:
     with get_session() as session:
         max_id = session.execute(
             select(func.max(VttFileRecord.lecture_id))
@@ -169,7 +169,7 @@ def getHighestTeletaskID():
 
 
 @db_operation(success_message="Successfully queried smallest Teletask ID.")
-def getSmallestTeletaskID():
+def getSmallestTeletaskID() -> int | None:
     with get_session() as session:
         min_id = session.execute(
             select(func.min(VttFileRecord.lecture_id))

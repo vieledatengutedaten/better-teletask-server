@@ -13,7 +13,7 @@ def register_middleware(app: FastAPI):
     Order: last added = outermost (first to execute on request).
     Execution order: HTTPS redirect -> CORS -> Logging -> Auth -> route
     """
-    
+
     app.add_middleware(AuthMiddleware)
     app.add_middleware(
         CORSMiddleware,
@@ -25,4 +25,3 @@ def register_middleware(app: FastAPI):
         app.add_middleware(HTTPSRedirectMiddleware)
 
     app.add_middleware(RequestLoggingMiddleware)
-

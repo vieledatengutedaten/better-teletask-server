@@ -1,5 +1,4 @@
 from datetime import datetime
-
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
@@ -26,9 +25,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
         api_key = db.get_api_key_by_key(token)
         if not api_key:
-            return JSONResponse(
-                status_code=401, content={"detail": "Invalid API key"}
-            )
+            return JSONResponse(status_code=401, content={"detail": "Invalid API key"})
 
         if api_key.status == "revoked":
             return JSONResponse(

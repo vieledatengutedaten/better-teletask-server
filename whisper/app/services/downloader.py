@@ -10,6 +10,31 @@ from app.core.config import INPUT_PATH, OUTPUT_PATH
 CHAIN_PEM = Path(__file__).parent / "chain.pem"
 
 
+def get_mp3_from_url(url: str, id: int) -> Path:
+    mp3_path = INPUT_PATH / f"{id}.mp3"
+    try:
+        logger.info(f"Converting to mp3 from URL: {url}", extra={"id": id})
+        convert_to_mp3(url, str(mp3_path))
+        return mp3_path
+    except Exception as e:
+        logger.error(
+            f"Direct conversion failed, trying to download mp4 and convert locally: {e}",
+            extra={"id": id},
+            exc_info=True,
+        )
+        try:
+            downloadMP4(url, id)
+            convert_to_mp3(str(INPUT_PATH / f"{id}.mp4"), str(mp3_path))
+            return mp3_path
+        except Exception as e2:
+            logger.error(
+                f"Could not obtain audio from URL: {e2}",
+                extra={"id": id},
+                exc_info=True,
+            )
+            raise
+
+
 def downloadMP4(url: str, id: int):
     try:
         mp4_response = requests.get(url, stream=True, verify=str(CHAIN_PEM))

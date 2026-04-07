@@ -2,7 +2,7 @@ import asyncio
 
 from app.services.scraper import get_upper_ids
 from app.db.blacklist import get_missing_available_inbetween_ids
-from app.workers.queues import (
+from app.scheduler.queues import (
     prio_queue,
     forward_queue,
     in_between_queue,
