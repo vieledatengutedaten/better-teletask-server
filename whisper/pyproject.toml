@@ -19,4 +19,5 @@ dependencies = [
     "uvicorn>=0.42.0",
     "webvtt-py==0.5.1",
     "whisperx>=3.8.2",
+    "torchcodec>=0.7,<0.8",
 ]
