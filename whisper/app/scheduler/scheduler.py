@@ -8,6 +8,7 @@ from app.models.dataclasses import Job, ResourceCategory, TranscriptionJob, Tran
 from app.scheduler.queues import QueueManager
 from app.worker.worker import Worker
 from app.worker.local.local_worker import LocalWorker
+from app.worker.worker_manager import WorkerManager
 
 
 _scheduler: "Scheduler | None" = None
@@ -47,12 +48,12 @@ class Scheduler:
         queue_manager: QueueManager,
         max_workers: int = 5,
         batch_size: int = 10,
-        worker: Worker | None = None,
+        worker_manager: WorkerManager | None = None,
     ) -> None:
         self.queue_manager: QueueManager = queue_manager
         self.max_workers: int = max_workers
         self.batch_size: int = batch_size
-        self.worker: Worker = worker or LocalWorker()
+        self.worker_manager: WorkerManager = worker_manager or WorkerManager()
         self._active_workers: dict[str, list[Job]] = {}
         self._jobs_by_id: dict[str, Job] = {}
         self._wake: Event = asyncio.Event()
@@ -100,9 +101,9 @@ class Scheduler:
 
         first = jobs[0]
         if isinstance(first, TranscriptionJob):
-            self.worker.transcribe(worker_id, cast(list[TranscriptionJob], jobs))
+            self.worker_manager.transcribe(worker_id, cast(list[TranscriptionJob], jobs))
         else:
-            self.worker.translate(worker_id, cast(list[TranslationJob], jobs))
+            self.worker_manager.translate(worker_id, cast(list[TranslationJob], jobs))
 
     async def _dispatch_available(self) -> int:
         """Dispatch workers until capacity is full or all queues are empty.
