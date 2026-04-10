@@ -1,6 +1,7 @@
 import asyncio
 from collections import deque
 from typing import Any, Callable, Sequence, cast, get_args
+from app.utils.broadcast import fire_broadcast
 from app.models.dataclasses import (
     Job,
     ResourceCategory,
@@ -163,6 +164,7 @@ class QueueManager:
         result = await self._queues[category][tier].add(job)
         if result:
             self._job_available.set()
+            fire_broadcast()
         return result
 
     async def add_all(self, jobs: Sequence[Job], priority: bool = False) -> int:
@@ -183,6 +185,7 @@ class QueueManager:
 
         if added_total > 0:
             self._job_available.set()
+            fire_broadcast()
 
         return added_total
 
@@ -234,6 +237,14 @@ class QueueManager:
         for cat in (category,) if category else _RESOURCE_CATEGORIES:
             for queue in self._queues[cat].values():
                 result.extend(await queue.get_all())
+        return result
+
+    async def snapshot(self) -> dict[str, int]:
+        """Return queue sizes per category and tier."""
+        result: dict[str, int] = {}
+        for cat in _RESOURCE_CATEGORIES:
+            for tier in ("priority", "normal"):
+                result[f"{cat}_{tier}"] = await self._queues[cat][tier].size()
         return result
 
     async def wait_for_job(self, timeout: float = 120) -> bool:

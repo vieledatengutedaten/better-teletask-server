@@ -4,6 +4,7 @@ from asyncio.locks import Event
 from typing import cast
 
 from app.core.logger import logger
+from app.utils.broadcast import fire_broadcast
 from app.models.dataclasses import Job, ResourceCategory, TranscriptionJob, TranslationJob
 from app.scheduler.queues import QueueManager
 from app.worker.worker import Worker
@@ -120,6 +121,8 @@ class Scheduler:
         else:
             self.worker_manager.translate(worker_id, cast(list[TranslationJob], jobs))
 
+        fire_broadcast()
+
     async def _dispatch_available(self) -> int:
         """Dispatch workers until capacity is full or all queues are empty.
 
@@ -154,6 +157,7 @@ class Scheduler:
                 _ = self._jobs_by_id.pop(job.id, None)
             logger.info(f"Worker {worker_id} finished ({len(jobs)} job(s))")
         self._wake.set()
+        fire_broadcast()
         return jobs
 
     def worker_finished_for_job(self, job_id: str) -> list[Job] | None:

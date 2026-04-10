@@ -15,6 +15,7 @@ from app.models.dataclasses import TranscriptionJob, TranscriptionParams
 from app.services.scraper import get_upper_ids
 from app.scheduler.queues import queue_manager
 from app.scheduler.scheduler import Scheduler, set_scheduler
+from app.core.config import ENVIRONMENT
 from app.api.scheduling_routes import schedule_router
 from app.api.worker_routes import worker_router
 
@@ -68,6 +69,10 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 app.include_router(schedule_router, prefix="/schedule")
 app.include_router(worker_router, prefix="/worker")
+
+if ENVIRONMENT == "dev":
+    from app.api.admin_routes import admin_router
+    app.include_router(admin_router, prefix="/admin")
 
 
 if __name__ == "__main__":

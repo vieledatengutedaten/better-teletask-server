@@ -18,6 +18,7 @@ dependencies = [
     "sqlalchemy>=2.0.48",
     "uvicorn>=0.42.0",
     "webvtt-py==0.5.1",
-    "whisperx>=3.8.2",
+    "whisperx>=3.8.4",
+    "websockets==16.0",
     "torchcodec>=0.7,<0.8",
 ]
