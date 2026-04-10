@@ -1,5 +1,5 @@
 from datetime import date as dt_date, datetime as dt_datetime, timedelta as dt_timedelta
-from typing import Literal, TypeAlias, override
+from typing import Annotated, Literal, TypeAlias, override
 import uuid
 
 from sqlalchemy.engine import url
@@ -97,13 +97,30 @@ class SearchResult(BaseModel):
 
 Language: TypeAlias = Literal["en", "de", "original"]
 
+SLURMWorkerStatuses: TypeAlias = Literal[
+    "PENDING",
+    "RUNNING",
+    "PREEMPTED",
+    "DEADLINE",
+    "TIMEOUT",
+    "SUSPENDED",
+    "COMPLETED",
+    "CANCELLED",
+    "FAILED",
+]
 
-class JobResult(BaseModel):
+LogLevel: TypeAlias = Literal["debug", "info", "warning", "error", "critical"]
+
+SchedulerStatuses: TypeAlias = Literal["RUNNING", "COMPLETED", "FAILED", "ENQUEUED"]
+
+JobType: TypeAlias = Literal["transcription", "translation"]
+
+class JobResultBase(BaseModel):
     job_id: str
     success: bool
     message: str | None = None
-    batch_size: int | None = None
-    no_in_batch: int | None = None
+    #batch_size: int | None = None
+    #no_in_batch: int | None = None
 
 
 class TranscriptionParams(BaseModel):
@@ -111,7 +128,8 @@ class TranscriptionParams(BaseModel):
     initial_prompt: str | None = None
 
 
-class TranscriptionResult(JobResult):
+class TranscriptionResult(JobResultBase):
+    job_type: Literal["transcription"] = "transcription"
     language: str | None = None
     vtt_data: str | None = None
     txt_data: str | None = None
@@ -132,29 +150,17 @@ class TranslationParams(BaseModel):
     additional_prompt: str | None = None
 
 
-class TranslationResult(JobResult):
+class TranslationResult(JobResultBase):
+    job_type: Literal["translation"] = "translation"
     vtt_data: str | None = None
     txt_data: str | None = None
 
 
-SLURMWorkerStatuses: TypeAlias = Literal[
-    "PENDING",
-    "RUNNING",
-    "PREEMPTED",
-    "DEADLINE",
-    "TIMEOUT",
-    "SUSPENDED",
-    "COMPLETED",
-    "CANCELLED",
-    "FAILED",
+JobResult: TypeAlias = Annotated[
+    TranscriptionResult | TranslationResult,
+    Field(discriminator="job_type"),
 ]
 
-LogLevel: TypeAlias = Literal["debug", "info", "warning", "error", "critical"]
-
-SchedulerStatuses: TypeAlias = Literal["RUNNING", "COMPLETED", "FAILED", "ENQUEUED"]
-
-
-JobType: TypeAlias = Literal["transcription", "translation"]
 
 
 class BaseJob(BaseModel):

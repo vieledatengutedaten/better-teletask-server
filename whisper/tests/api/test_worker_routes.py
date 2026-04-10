@@ -77,7 +77,7 @@ class TestWorkerRoutesV2:
     ):
         response = client.post(
             f"/worker/worker-1/jobs/{job.id}/result",
-            json={"job_id": job.id, "success": True},
+            json={"job_id": job.id, "success": True, "job_type": "transcription"},
         )
         assert response.status_code == 200
         assert scheduler.worker_finished_calls == []
@@ -93,6 +93,6 @@ class TestWorkerRoutesV2:
     def test_legacy_route_not_available(self, client: TestClient, job: TranscriptionJob):
         response = client.post(
             f"/worker/{job.id}/result",
-            json={"job_id": job.id, "success": True},
+            json={"job_id": job.id, "success": True, "job_type": "transcription"},
         )
         assert response.status_code == 404

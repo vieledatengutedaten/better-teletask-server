@@ -24,6 +24,23 @@ async def get_queues():
     }
 
 
+@schedule_router.get("/scheduler")
+async def get_scheduler_state():
+    try:
+        scheduler = get_scheduler()
+    except RuntimeError:
+        return {
+            "max_workers": 0,
+            "batch_size": 0,
+            "available_capacity": 0,
+            "active_worker_count": 0,
+            "active_workers": {},
+            "jobs_by_id": {},
+        }
+
+    return scheduler.snapshot()
+
+
 @schedule_router.get("/ping")
 async def ping_pong():
     return "pong"

@@ -47,7 +47,7 @@ class Scheduler:
         self,
         queue_manager: QueueManager,
         max_workers: int = 5,
-        batch_size: int = 10,
+        batch_size: int = 2,
         worker_manager: WorkerManager | None = None,
     ) -> None:
         self.queue_manager: QueueManager = queue_manager
@@ -75,6 +75,21 @@ class Scheduler:
             if any(job.id == job_id for job in jobs):
                 return worker_id
         return None
+
+    def snapshot(self) -> dict[str, object]:
+        return {
+            "max_workers": self.max_workers,
+            "batch_size": self.batch_size,
+            "available_capacity": self.available_capacity,
+            "active_worker_count": len(self._active_workers),
+            "active_workers": {
+                worker_id: [job.model_dump() for job in jobs]
+                for worker_id, jobs in self._active_workers.items()
+            },
+            "jobs_by_id": {
+                job_id: job.model_dump() for job_id, job in self._jobs_by_id.items()
+            },
+        }
 
     async def _next_batch(self, n: int) -> list[Job]:
         """Return up to n jobs, all from the highest-priority category.
@@ -131,6 +146,7 @@ class Scheduler:
             logger.warning(f"worker_finished called for unknown worker {worker_id}")
         else:
             for job in jobs:
+                job.stat
                 _ = self._jobs_by_id.pop(job.id, None)
             logger.info(f"Worker {worker_id} finished ({len(jobs)} job(s))")
         self._wake.set()

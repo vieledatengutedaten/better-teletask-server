@@ -1,10 +1,11 @@
-from typing import Annotated, cast
-from fastapi import APIRouter, Depends, HTTPException, Request
+from typing import Annotated
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from app.core.logger import logger
 from app.models.dataclasses import (
     Job,
+    JobResult,
     LogLevel,
     SchedulerStatuses,
 )
@@ -43,21 +44,11 @@ def _require_worker_owns_job(scheduler: Scheduler, worker_id: str, job_id: str) 
     return job
 
 
-def _parse_request_body(raw_body: object) -> dict[str, object]:
-    if not isinstance(raw_body, dict):
-        raise HTTPException(status_code=400, detail="Result payload must be an object")
-    raw_body_dict = cast(dict[object, object], raw_body)
-    return {str(key): value for key, value in raw_body_dict.items()}
-
-
 async def _submit_result_common(
-    scheduler: Scheduler,
     job: Job,
-    body: dict[str, object],
-    worker_id: str,
+    result: JobResult,
 ) -> dict[str, str]:
     handler = get_job_handler(job.job_type)
-    result = handler.parse_result(body)
     await handler.handle_result(job, result)
 
     job.status = "COMPLETED"
@@ -112,16 +103,20 @@ async def append_log_v2(
 async def submit_result_v2(
     worker_id: str,
     job_id: str,
-    request: Request,
+    body: JobResult,
     scheduler: SchedulerDep,
 ):
     job = _require_worker_owns_job(scheduler, worker_id, job_id)
-    body = _parse_request_body(cast(object, await request.json()))
+
+    if body.job_type != job.job_type:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Result job_type {body.job_type} does not match job type {job.job_type}",
+        )
+
     return await _submit_result_common(
-        scheduler=scheduler,
         job=job,
-        body=body,
-        worker_id=worker_id,
+        result=body,
     )
 
 

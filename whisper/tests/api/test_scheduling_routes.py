@@ -67,6 +67,44 @@ class TestGetQueues:
         assert response.json()["active"] == []
 
 
+class TestGetScheduler:
+    @patch("app.api.scheduling_routes.get_scheduler")
+    def test_returns_scheduler_snapshot(self, mock_get_scheduler, client):
+        mock_get_scheduler.return_value = SimpleNamespace(
+            snapshot=lambda: {
+                "max_workers": 5,
+                "batch_size": 10,
+                "available_capacity": 3,
+                "active_worker_count": 2,
+                "active_workers": {"worker-1": [], "worker-2": []},
+                "jobs_by_id": {},
+            }
+        )
+
+        response = client.get("/scheduler")
+        assert response.status_code == 200
+
+        data = response.json()
+        assert data["max_workers"] == 5
+        assert data["batch_size"] == 10
+        assert data["available_capacity"] == 3
+        assert data["active_worker_count"] == 2
+        assert set(data["active_workers"].keys()) == {"worker-1", "worker-2"}
+
+    @patch("app.api.scheduling_routes.get_scheduler", side_effect=RuntimeError("not initialized"))
+    def test_returns_empty_snapshot_when_scheduler_unavailable(self, _mock_get_scheduler, client):
+        response = client.get("/scheduler")
+        assert response.status_code == 200
+        assert response.json() == {
+            "max_workers": 0,
+            "batch_size": 0,
+            "available_capacity": 0,
+            "active_worker_count": 0,
+            "active_workers": {},
+            "jobs_by_id": {},
+        }
+
+
 class TestPrioritize:
     @patch("app.api.scheduling_routes.queue_manager")
     @patch("app.api.scheduling_routes.pingVideoByID", return_value="200")

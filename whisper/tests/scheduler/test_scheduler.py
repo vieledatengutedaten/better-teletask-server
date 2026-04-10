@@ -13,6 +13,7 @@ from app.models.dataclasses import (
 )
 from app.scheduler.queues import QueueManager
 from app.scheduler.scheduler import Scheduler
+from app.worker.worker_manager import WorkerManager
 from app.worker.worker import Worker
 
 
@@ -68,7 +69,10 @@ def scheduler(queue_manager: QueueManager, fake_worker: FakeWorker) -> Scheduler
         queue_manager=queue_manager,
         max_workers=3,
         batch_size=5,
-        worker=fake_worker,
+        worker_manager=WorkerManager(
+            transcribeWorker=fake_worker,
+            translateWorker=fake_worker,
+        ),
     )
 
 
@@ -189,7 +193,10 @@ class TestPriority:
             queue_manager=queue_manager,
             max_workers=4,
             batch_size=1,
-            worker=fake_worker,
+            worker_manager=WorkerManager(
+                transcribeWorker=fake_worker,
+                translateWorker=fake_worker,
+            ),
         )
         # Add in reverse priority order
         await queue_manager.add(make_translation(4), priority=False)   # ollama normal (lowest)

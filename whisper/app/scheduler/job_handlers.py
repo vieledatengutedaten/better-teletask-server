@@ -5,6 +5,7 @@ from typing import override
 from app.core.logger import logger
 from app.models.dataclasses import (
     Job,
+    JobResult,
     JobType,
     TranscriptionResult,
     TranslationResult,
@@ -13,15 +14,11 @@ from app.models.dataclasses import (
 
 class JobHandler(ABC):
     @abstractmethod
-    def parse_result(
-        self, body: Mapping[str, object]
-    ) -> TranscriptionResult | TranslationResult:
+    def parse_result(self, body: Mapping[str, object]) -> JobResult:
         raise NotImplementedError
 
     @abstractmethod
-    async def handle_result(
-        self, job: Job, result: TranscriptionResult | TranslationResult
-    ) -> None:
+    async def handle_result(self, job: Job, result: JobResult) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -35,9 +32,7 @@ class TranscriptionJobHandler(JobHandler):
         return TranscriptionResult.model_validate(body)
 
     @override
-    async def handle_result(
-        self, job: Job, result: TranscriptionResult | TranslationResult
-    ) -> None:
+    async def handle_result(self, job: Job, result: JobResult) -> None:
         if not isinstance(result, TranscriptionResult):
             raise TypeError("TranscriptionJobHandler received non-transcription result")
         logger.info(f"[mock] handled transcription result for {result.job_id}")
@@ -53,9 +48,7 @@ class TranslationJobHandler(JobHandler):
         return TranslationResult.model_validate(body)
 
     @override
-    async def handle_result(
-        self, job: Job, result: TranscriptionResult | TranslationResult
-    ) -> None:
+    async def handle_result(self, job: Job, result: JobResult) -> None:
         if not isinstance(result, TranslationResult):
             raise TypeError("TranslationJobHandler received non-translation result")
         logger.info(f"[mock] handled translation result for {result.job_id}")
