@@ -146,7 +146,11 @@ class Scheduler:
             logger.warning(f"worker_finished called for unknown worker {worker_id}")
         else:
             for job in jobs:
-                job.stat
+                if job.status not in ("COMPLETED", "FAILED"):
+                    #TODO reschedule job at this point? 
+                    logger.error(
+                        f"Worker {worker_id} finished, although Job {job.id} did not complete or fail {job.status}"
+                    )
                 _ = self._jobs_by_id.pop(job.id, None)
             logger.info(f"Worker {worker_id} finished ({len(jobs)} job(s))")
         self._wake.set()
