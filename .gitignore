@@ -11,3 +11,5 @@ crawl_results.txt
 *.log.*
 *.pem
 requests.md
+.idea/
+.vscode/
