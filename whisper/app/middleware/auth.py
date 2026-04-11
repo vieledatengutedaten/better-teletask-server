@@ -2,6 +2,7 @@ from datetime import datetime
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
+from app.core.config import ENVIRONMENT
 
 from app import db
 
@@ -10,6 +11,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
     """Validates API key from the Authorization header on every request."""
 
     async def dispatch(self, request: Request, call_next):
+
+        if (ENVIRONMENT == "dev"):
+            return await call_next(request)
 
         authorization = request.headers.get("authorization")
         if not authorization:
