@@ -29,7 +29,8 @@ def create_app():
 
 @pytest.fixture
 def client():
-    return TestClient(create_app())
+    with patch("app.middleware.auth.ENVIRONMENT", "vm"):
+        yield TestClient(create_app())
 
 
 def make_api_key(status="active", expiration_date=None):
