@@ -12,6 +12,7 @@ from lib.models.dataclasses import (
     TranslationParams,
 )
 from app.scheduler.queues import QueueManager
+from app.scheduler.job_handlers import get_job_handler
 from app.scheduler.scheduler import Scheduler
 from app.worker.worker_manager import WorkerManager
 from app.worker.worker import Worker
@@ -144,6 +145,71 @@ class TestBatching:
         assert dispatched == 0
         assert len(fake_worker.transcribe_calls) == 0
         assert len(fake_worker.translate_calls) == 0
+
+    @pytest.mark.asyncio
+    async def test_prepare_rejection_is_replaced_in_same_batch(
+        self,
+        queue_manager: QueueManager,
+        fake_worker: FakeWorker,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        sched = Scheduler(
+            queue_manager=queue_manager,
+            max_workers=1,
+            batch_size=3,
+            worker_manager=WorkerManager(
+                transcribeWorker=fake_worker,
+                translateWorker=fake_worker,
+            ),
+        )
+
+        for teletask_id in [1, 2, 3, 4, 5]:
+            await queue_manager.add(make_transcription(teletask_id))
+
+        handler = get_job_handler("transcription")
+        monkeypatch.setattr(
+            handler,
+            "prepare",
+            lambda job: job.params.teletask_id != 3,
+        )
+
+        dispatched = await sched._dispatch_available()
+
+        assert dispatched == 1
+        assert len(fake_worker.transcribe_calls) == 1
+        batch_ids = [job.params.teletask_id for job in fake_worker.transcribe_calls[0]]
+        assert len(batch_ids) == 3
+        assert 3 not in batch_ids
+        assert batch_ids == [5, 4, 2]
+
+    @pytest.mark.asyncio
+    async def test_all_prepare_rejected_dispatches_nothing(
+        self,
+        queue_manager: QueueManager,
+        fake_worker: FakeWorker,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        sched = Scheduler(
+            queue_manager=queue_manager,
+            max_workers=1,
+            batch_size=2,
+            worker_manager=WorkerManager(
+                transcribeWorker=fake_worker,
+                translateWorker=fake_worker,
+            ),
+        )
+
+        await queue_manager.add(make_transcription(1))
+        await queue_manager.add(make_transcription(2))
+
+        handler = get_job_handler("transcription")
+        monkeypatch.setattr(handler, "prepare", lambda job: False)
+
+        dispatched = await sched._dispatch_available()
+
+        assert dispatched == 0
+        assert len(fake_worker.transcribe_calls) == 0
+        assert sched.available_capacity == 1
 
 
 class TestPriority:

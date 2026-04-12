@@ -6,6 +6,7 @@ from sqlalchemy.engine import url
 import webvtt
 from pydantic import BaseModel, Field, field_validator
 
+#TODO this is getting too big, models should be split into multiple files
 
 class SeriesData(BaseModel):
     series_id: int
@@ -134,14 +135,6 @@ class TranscriptionResult(JobResultBase):
     vtt_data: str | None = None
     txt_data: str | None = None
 
-examplejson = {
-    "job_id": "tc-1234abcd",
-    "success": True,
-    "message": "Transcription completed successfully.",
-    "language": "en",
-    "vtt_data": "WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nHello, world!\n",
-    "txt_data": "Hello, world!",
-}
 
 class TranslationParams(BaseModel):
     teletask_id: int

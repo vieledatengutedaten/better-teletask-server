@@ -151,6 +151,7 @@ class QueueManager:
         self._job_available = asyncio.Event()
 
     def _category_for(self, job: Job) -> ResourceCategory:
+        #TODO this is fucking ugly, maybe a dict mapping in dataclasses
         if isinstance(job, TranscriptionJob):
             return "whisper"
         elif isinstance(job, TranslationJob):

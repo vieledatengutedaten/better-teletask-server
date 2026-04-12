@@ -13,7 +13,7 @@ from app.db.schema import (
     SeriesLecturerRecord,
     VttFileRecord,
 )
-from lib.models import SeriesData
+from lib.models.dataclasses import SeriesData
 
 from lib.core.logger import logger
 

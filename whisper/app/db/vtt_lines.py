@@ -4,7 +4,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from app.db.connection import get_session
 from app.db.error_handling import db_operation
 from app.db.schema import VttLineRecord
-from lib.models import VttLine, SearchResult
+from lib.models.dataclasses import VttLine, SearchResult
 
 from lib.core.logger import logger
 

@@ -6,6 +6,7 @@ from typing import cast
 from lib.core.logger import logger
 from app.utils.broadcast import fire_broadcast
 from lib.models.dataclasses import Job, ResourceCategory, TranscriptionJob, TranslationJob
+from app.scheduler.job_handlers import get_job_handler
 from app.scheduler.queues import QueueManager
 from app.worker.worker import Worker
 from app.worker.local.local_worker import LocalWorker
@@ -103,6 +104,35 @@ class Scheduler:
             return []
         return await self.queue_manager.next(category, n)
 
+    async def _next_prepared_batch(self, n: int) -> list[Job]:
+        """Return up to n jobs from the winning category that pass handler prepare()."""
+        category: ResourceCategory | None = await self.queue_manager.winning_category()
+        if category is None:
+            return []
+
+        prepared: list[Job] = []
+        while len(prepared) < n:
+            candidates = await self.queue_manager.next(category, 1)
+            if not candidates:
+                break
+
+            job = candidates[0]
+            handler = get_job_handler(job.job_type)
+
+            try:
+                is_prepared = handler.prepare(job)
+            except Exception as exc:
+                is_prepared = False
+                logger.exception(f"Prepare crashed for job {job.id}: {exc}")
+
+            if is_prepared:
+                prepared.append(job)
+            else:
+                job.status = "FAILED"
+                logger.warning(f"Prepare rejected job {job.id}; skipping dispatch")
+
+        return prepared
+
     def _dispatch_batch(self, jobs: list[Job]) -> None:
         """Register a batch of jobs as active and dispatch to worker. Returns worker_id."""
         self._worker_counter += 1
@@ -131,7 +161,7 @@ class Scheduler:
         """
         dispatched = 0
         while self.available_capacity > 0:
-            jobs = await self._next_batch(self.batch_size)
+            jobs = await self._next_prepared_batch(self.batch_size)
             if not jobs:
                 break
             self._dispatch_batch(jobs)
