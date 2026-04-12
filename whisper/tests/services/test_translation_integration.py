@@ -146,11 +146,11 @@ class TestOllamaTranslation:
 
         with (
             patch(
-                "app.services.translation.get_original_vtt",
+                "lib.services.translation.get_original_vtt",
                 side_effect=mock_get_original_vtt,
             ),
             patch(
-                "app.services.translation.save_vtt_file",
+                "lib.services.translation.save_vtt_file",
                 side_effect=mock_save_vtt_file,
             ),
         ):

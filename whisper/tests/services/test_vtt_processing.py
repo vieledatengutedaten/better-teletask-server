@@ -48,10 +48,10 @@ class TestSaveVttLines:
     We mock all DB calls and provide a valid VTT string.
     """
 
-    @patch("app.services.vtt_processing.bulk_insert_vtt_lines")
-    @patch("app.services.vtt_processing.get_lecturer_ids_of_lecture")
-    @patch("app.services.vtt_processing.get_series_of_vtt_file")
-    @patch("app.services.vtt_processing.get_vtt_file_by_id")
+    @patch("lib.services.vtt_processing.bulk_insert_vtt_lines")
+    @patch("lib.services.vtt_processing.get_lecturer_ids_of_lecture")
+    @patch("lib.services.vtt_processing.get_series_of_vtt_file")
+    @patch("lib.services.vtt_processing.get_vtt_file_by_id")
     def test_parses_vtt_and_inserts_lines(
         self, mock_get_vtt, mock_get_series, mock_get_lecturers, mock_bulk_insert
     ):
@@ -92,10 +92,10 @@ class TestSaveVttLines:
         assert lines[1].content == "Second line"
         assert lines[1].line_number == 2
 
-    @patch("app.services.vtt_processing.bulk_insert_vtt_lines")
-    @patch("app.services.vtt_processing.get_lecturer_ids_of_lecture")
-    @patch("app.services.vtt_processing.get_series_of_vtt_file")
-    @patch("app.services.vtt_processing.get_vtt_file_by_id")
+    @patch("lib.services.vtt_processing.bulk_insert_vtt_lines")
+    @patch("lib.services.vtt_processing.get_lecturer_ids_of_lecture")
+    @patch("lib.services.vtt_processing.get_series_of_vtt_file")
+    @patch("lib.services.vtt_processing.get_vtt_file_by_id")
     def test_returns_early_if_vtt_not_found(
         self, mock_get_vtt, mock_get_series, mock_get_lecturers, mock_bulk_insert
     ):
