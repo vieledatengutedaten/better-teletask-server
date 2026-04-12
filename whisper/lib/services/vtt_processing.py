@@ -2,9 +2,9 @@ import webvtt
 from app.db.vtt_files import get_vtt_file_by_id
 from app.db.vtt_lines import bulk_insert_vtt_lines
 from app.db.lectures import get_series_of_vtt_file, get_lecturer_ids_of_lecture
-from app.models import VttFile, VttLine
+from lib.models import VttFile, VttLine
 
-from app.core.logger import logger
+from lib.core.logger import logger
 
 
 # HH:MM:SS.mmm

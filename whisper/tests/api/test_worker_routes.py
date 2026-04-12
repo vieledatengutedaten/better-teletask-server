@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 import pytest
 
 from app.api.worker_routes import worker_router
-from app.models.dataclasses import TranscriptionJob, TranscriptionParams
+from lib.models.dataclasses import TranscriptionJob, TranscriptionParams
 from app.scheduler.scheduler import get_scheduler
 
 

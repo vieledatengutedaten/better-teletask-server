@@ -1,6 +1,6 @@
 import asyncio
 
-from app.services.scraper import get_upper_ids
+from lib.services.scraper import get_upper_ids
 from app.db.blacklist import get_missing_available_inbetween_ids
 from app.scheduler.queues import (
     prio_queue,
@@ -11,7 +11,7 @@ from app.scheduler.queues import (
     multi_lock,
 )
 
-from app.core.logger import logger
+from lib.core.logger import logger
 
 
 async def update_upper_ids_periodically():

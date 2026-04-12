@@ -1,8 +1,8 @@
-from app.core.logger import logger
+from lib.core.logger import logger
 
-from app.core.config import INPUT_PATH
-from app.services.lecture_service import get_mp4_url_and_ensure_lecture_data
-from app.services.downloader import downloadMP4, convert_to_mp3, remove_all_id_files
+from lib.core.config import INPUT_PATH
+from lib.services.lecture_service import get_mp4_url_and_ensure_lecture_data
+from lib.services.downloader import downloadMP4, convert_to_mp3, remove_all_id_files
 from app.db.lectures import get_language_of_lecture
 from app.db.vtt_files import save_vtt_as_blob
 from app.db.migrations import initDatabase
@@ -12,7 +12,7 @@ from requests.models import HTTPError
 
 def transcribePipelineVideoByID(id: int):
     # lazyload whisper here to avoid the annoying waiting time
-    from app.services.whisper_asr import transcribeVideoByID
+    from lib.services.whisper_asr import transcribeVideoByID
 
     url = get_mp4_url_and_ensure_lecture_data(id)
 

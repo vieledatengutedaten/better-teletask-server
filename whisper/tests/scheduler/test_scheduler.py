@@ -5,7 +5,7 @@ Tests for scheduler/scheduler.py — Scheduler
 import asyncio
 
 import pytest
-from app.models.dataclasses import (
+from lib.models.dataclasses import (
     TranscriptionJob,
     TranscriptionParams,
     TranslationJob,

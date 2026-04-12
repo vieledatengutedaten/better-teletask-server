@@ -11,7 +11,7 @@ from types import SimpleNamespace
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.models import ApiKey
+from lib.models import ApiKey
 
 
 class TestAddApiKey:

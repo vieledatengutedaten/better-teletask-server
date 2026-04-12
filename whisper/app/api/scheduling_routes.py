@@ -1,8 +1,8 @@
 from fastapi import APIRouter
 
-from app.core.logger import logger
-from app.models.dataclasses import TranscriptionJob, TranscriptionParams
-from app.services.scraper import pingVideoByID
+from lib.core.logger import logger
+from lib.models.dataclasses import TranscriptionJob, TranscriptionParams
+from lib.services.scraper import pingVideoByID
 from app.scheduler.queues import queue_manager
 from app.scheduler.scheduler import get_scheduler
 

@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Header, HTTPException, Depends
 from datetime import datetime
-from app.models.dataclasses import SearchResult
+from lib.models.dataclasses import SearchResult
 from app.db.vtt_lines import search_vtt_lines
 
-from app.core.logger import logger
+from lib.core.logger import logger
 
 search_router = APIRouter()
 

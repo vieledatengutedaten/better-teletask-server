@@ -2,7 +2,7 @@ import asyncio
 from collections import deque
 from typing import Any, Callable, Sequence, cast, get_args
 from app.utils.broadcast import fire_broadcast
-from app.models.dataclasses import (
+from lib.models.dataclasses import (
     Job,
     ResourceCategory,
     TranscriptionJob,

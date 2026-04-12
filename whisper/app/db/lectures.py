@@ -13,9 +13,9 @@ from app.db.schema import (
     SeriesLecturerRecord,
     VttFileRecord,
 )
-from app.models import SeriesData
+from lib.models import SeriesData
 
-from app.core.logger import logger
+from lib.core.logger import logger
 
 
 @db_operation(success_message="Successfully queried series of VTT file.")

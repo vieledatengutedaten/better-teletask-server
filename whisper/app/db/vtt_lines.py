@@ -4,9 +4,9 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from app.db.connection import get_session
 from app.db.error_handling import db_operation
 from app.db.schema import VttLineRecord
-from app.models import VttLine, SearchResult
+from lib.models import VttLine, SearchResult
 
-from app.core.logger import logger
+from lib.core.logger import logger
 
 
 @db_operation(success_message="Successfully bulk inserted {vtt_lines_len} VTT lines.")

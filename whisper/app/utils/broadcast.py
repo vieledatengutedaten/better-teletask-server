@@ -1,6 +1,6 @@
 import asyncio
 
-from app.core.config import ENVIRONMENT
+from lib.core.config import ENVIRONMENT
 
 
 def fire_broadcast() -> None:

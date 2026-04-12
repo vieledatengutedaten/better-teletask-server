@@ -9,10 +9,10 @@ from pathlib import Path
 
 from sqlalchemy.sql import elements
 
-from app.core.config import USERNAME_COOKIE, BASE_URL
+from lib.core.config import USERNAME_COOKIE, BASE_URL
 from app.db.vtt_files import getHighestTeletaskID
 
-from app.core.logger import logger
+from lib.core.logger import logger
 
 CHAIN_PEM = Path(__file__).parent / "chain.pem"
 

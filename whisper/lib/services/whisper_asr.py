@@ -1,12 +1,12 @@
 # setup logging
-from app.core.logger import logger
+from lib.core.logger import logger
 
 logger.propagate = False
 
 import whisperx
 from whisperx.utils import get_writer
 
-from app.core.config import ASR_MODEL, COMPUTE_TYPE, INPUT_PATH, OUTPUT_PATH, DEVICE
+from lib.core.config import ASR_MODEL, COMPUTE_TYPE, INPUT_PATH, OUTPUT_PATH, DEVICE
 from app.db.lectures import get_language_of_lecture
 
 device = DEVICE

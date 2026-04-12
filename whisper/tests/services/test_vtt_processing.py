@@ -8,7 +8,7 @@ save_vtt_lines requires DB calls — mock those.
 import pytest
 from unittest.mock import patch, MagicMock
 
-from app.services.vtt_processing import timestamp_to_ms
+from lib.services.vtt_processing import timestamp_to_ms
 
 
 class TestTimestampToMs:
@@ -55,7 +55,7 @@ class TestSaveVttLines:
     def test_parses_vtt_and_inserts_lines(
         self, mock_get_vtt, mock_get_series, mock_get_lecturers, mock_bulk_insert
     ):
-        from app.models import VttFile, SeriesData
+        from lib.models import VttFile, SeriesData
 
         vtt_content = (
             "WEBVTT\n\n"
@@ -77,7 +77,7 @@ class TestSaveVttLines:
         )
         mock_get_lecturers.return_value = [1, 2]
 
-        from app.services.vtt_processing import save_vtt_lines
+        from lib.services.vtt_processing import save_vtt_lines
 
         save_vtt_lines(1)
 
@@ -101,7 +101,7 @@ class TestSaveVttLines:
     ):
         mock_get_vtt.return_value = None
 
-        from app.services.vtt_processing import save_vtt_lines
+        from lib.services.vtt_processing import save_vtt_lines
 
         save_vtt_lines(999)
 

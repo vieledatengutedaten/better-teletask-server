@@ -2,8 +2,8 @@ import asyncio
 
 
 from app.db.vtt_files import original_language_exists
-from app.services.scraper import pingVideoByID
-from app.services.pipeline import transcribePipelineVideoByID
+from lib.services.scraper import pingVideoByID
+from lib.services.pipeline import transcribePipelineVideoByID
 from app.scheduler.queues import (
     prio_queue,
     forward_queue,
@@ -13,7 +13,7 @@ from app.scheduler.queues import (
     multi_lock,
 )
 
-from app.core.logger import logger
+from lib.core.logger import logger
 
 
 async def get_id_for_worker() -> int | None:

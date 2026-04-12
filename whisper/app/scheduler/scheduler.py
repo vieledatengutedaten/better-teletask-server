@@ -3,9 +3,9 @@ import asyncio
 from asyncio.locks import Event
 from typing import cast
 
-from app.core.logger import logger
+from lib.core.logger import logger
 from app.utils.broadcast import fire_broadcast
-from app.models.dataclasses import Job, ResourceCategory, TranscriptionJob, TranslationJob
+from lib.models.dataclasses import Job, ResourceCategory, TranscriptionJob, TranslationJob
 from app.scheduler.queues import QueueManager
 from app.worker.worker import Worker
 from app.worker.local.local_worker import LocalWorker

@@ -6,10 +6,10 @@ from typing import Any
 from pydantic import BaseModel, computed_field
 
 from pathlib import Path
-from app.core.config import OLLAMA_URL, OLLAMA_MODEL, OUTPUT_PATH
+from lib.core.config import OLLAMA_URL, OLLAMA_MODEL, OUTPUT_PATH
 from app.db.vtt_files import get_original_vtt_by_id, get_original_language_by_id
 
-from app.core.logger import logger
+from lib.core.logger import logger
 
 LANGUAGES: dict[str, str] = {
     "de": "German",

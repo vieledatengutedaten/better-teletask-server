@@ -7,7 +7,7 @@ Verifies construction, defaults, validation, and basic behavior.
 
 import pytest
 from datetime import date, datetime, timedelta
-from app.models import (
+from lib.models import (
     SeriesData,
     LecturerData,
     LectureData,

@@ -13,7 +13,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.api.scheduling_routes import schedule_router
-from app.models.dataclasses import TranscriptionJob, TranscriptionParams
+from lib.models.dataclasses import TranscriptionJob, TranscriptionParams
 
 
 @pytest.fixture

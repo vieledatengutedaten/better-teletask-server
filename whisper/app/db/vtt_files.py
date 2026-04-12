@@ -4,10 +4,10 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from app.db.connection import get_session
 from app.db.error_handling import db_operation
 from app.db.schema import VttFileRecord
-from app.models import VttFile
-from app.core.config import OUTPUT_PATH, ASR_MODEL, COMPUTE_TYPE
+from lib.models import VttFile
+from lib.core.config import OUTPUT_PATH, ASR_MODEL, COMPUTE_TYPE
 
-from app.core.logger import logger
+from lib.core.logger import logger
 
 
 def _to_vtt_file(record: VttFileRecord) -> VttFile:

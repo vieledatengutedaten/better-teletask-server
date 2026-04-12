@@ -4,7 +4,7 @@ Tests for scheduler/queues.py — AsyncJobQueue and QueueManager
 
 import pytest
 from app.scheduler.queues import AsyncJobQueue, QueueManager
-from app.models.dataclasses import (
+from lib.models.dataclasses import (
     TranscriptionJob,
     TranscriptionParams,
     TranslationJob,

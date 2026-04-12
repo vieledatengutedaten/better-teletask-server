@@ -8,7 +8,7 @@ Run explicitly with:  pytest -m integration
 import pytest
 from unittest.mock import patch
 
-from app.services.translation import (
+from lib.services.translation import (
     parse_vtt_blocks,
     process_block_timestamps,
     group_blocks_into_chunks,
@@ -104,7 +104,7 @@ class TestOllamaTranslation:
 
     def test_query_ollama_returns_response(self):
         """Smoke test: check that Ollama responds to a trivial prompt."""
-        from app.core.config import OLLAMA_URL, OLLAMA_MODEL
+        from lib.core.config import OLLAMA_URL, OLLAMA_MODEL
 
         result = query_ollama(
             "Translate to English: Hallo Welt", OLLAMA_URL, OLLAMA_MODEL
@@ -114,7 +114,7 @@ class TestOllamaTranslation:
 
     def test_translate_small_vtt_chunk(self):
         """Translate the 3-block sample and verify placeholders survive."""
-        from app.core.config import OLLAMA_URL, OLLAMA_MODEL
+        from lib.core.config import OLLAMA_URL, OLLAMA_MODEL
 
         _, blocks = parse_vtt_blocks(SAMPLE_VTT)
         clean_blocks, ts_map = process_block_timestamps(blocks)

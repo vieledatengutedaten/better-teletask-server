@@ -3,7 +3,7 @@ from app.db.vtt_files import get_original_vtt_by_id
 from fastapi import APIRouter, HTTPException, Response
 import httpx
 
-from app.core.logger import logger
+from lib.core.logger import logger
 
 
 async def prioritize_lecture(id: int):

@@ -7,15 +7,15 @@ import contextlib
 from fastapi import FastAPI
 
 # setup logging — must be imported before other modules to configure handlers
-from app.core.logger import logger
+from lib.core.logger import logger
 from app.db.migrations import initDatabase
 from app.db.vtt_files import getSmallestTeletaskID
 from app.db.blacklist import get_missing_available_inbetween_ids
-from app.models.dataclasses import TranscriptionJob, TranscriptionParams
-from app.services.scraper import get_upper_ids
+from lib.models.dataclasses import TranscriptionJob, TranscriptionParams
+from lib.services.scraper import get_upper_ids
 from app.scheduler.queues import queue_manager
 from app.scheduler.scheduler import Scheduler, set_scheduler
-from app.core.config import ENVIRONMENT
+from lib.core.config import ENVIRONMENT
 from app.api.scheduling_routes import schedule_router
 from app.api.worker_routes import worker_router
 

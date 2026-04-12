@@ -5,7 +5,7 @@ from urllib.parse import quote_plus
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.core.config import DB_NAME, DB_USER, DB_PASS, DB_HOST, DB_PORT
+from lib.core.config import DB_NAME, DB_USER, DB_PASS, DB_HOST, DB_PORT
 
 
 def _build_database_url() -> str:

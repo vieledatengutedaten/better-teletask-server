@@ -4,9 +4,9 @@ from sqlalchemy.dialects.postgresql import insert
 from app.db.connection import get_session
 from app.db.error_handling import db_operation
 from app.db.schema import ApiKeyRecord
-from app.models import ApiKey
+from lib.models import ApiKey
 
-from app.core.logger import logger
+from lib.core.logger import logger
 
 
 def _to_api_key(record: ApiKeyRecord) -> ApiKey:

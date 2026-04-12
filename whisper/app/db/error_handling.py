@@ -2,7 +2,7 @@ from functools import wraps
 import inspect
 from typing import Any, Callable, ParamSpec, TypeVar
 
-from app.core.logger import logger
+from lib.core.logger import logger
 
 P = ParamSpec("P")
 R = TypeVar("R")

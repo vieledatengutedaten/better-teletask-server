@@ -1,6 +1,6 @@
 from typing import override
 from app.worker.worker import Worker
-from app.models.dataclasses import TranscriptionJob, TranslationJob
+from lib.models.dataclasses import TranscriptionJob, TranslationJob
 
 
 class LocalWorker(Worker):

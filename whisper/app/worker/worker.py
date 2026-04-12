@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import override
-from app.models.dataclasses import TranscriptionJob, TranslationJob
+from lib.models.dataclasses import TranscriptionJob, TranslationJob
 
 
 class Worker(ABC):

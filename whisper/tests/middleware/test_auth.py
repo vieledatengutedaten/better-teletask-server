@@ -13,7 +13,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.middleware.auth import AuthMiddleware
-from app.models import ApiKey
+from lib.models import ApiKey
 
 
 def create_app():

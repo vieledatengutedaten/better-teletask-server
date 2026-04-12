@@ -16,7 +16,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.models import SearchResult
+from lib.models import SearchResult
 
 # ---------------------------------------------------------------------------
 # Helpers

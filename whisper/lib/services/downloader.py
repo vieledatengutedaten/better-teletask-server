@@ -1,11 +1,11 @@
 from pathlib import Path
 
 import requests
-from app.core.logger import logger
+from lib.core.logger import logger
 from tqdm import tqdm
 import ffmpeg
 
-from app.core.config import INPUT_PATH, OUTPUT_PATH
+from lib.core.config import INPUT_PATH, OUTPUT_PATH
 
 CHAIN_PEM = Path(__file__).parent / "chain.pem"
 

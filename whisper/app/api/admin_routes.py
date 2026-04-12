@@ -5,7 +5,7 @@ from typing import Any
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
-from app.core.logger import logger
+from lib.core.logger import logger
 from app.scheduler.queues import queue_manager
 from app.scheduler.scheduler import get_scheduler
 

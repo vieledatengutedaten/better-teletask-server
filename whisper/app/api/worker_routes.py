@@ -2,8 +2,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from app.core.logger import logger
-from app.models.dataclasses import (
+from lib.core.logger import logger
+from lib.models.dataclasses import (
     Job,
     JobResult,
     LogLevel,

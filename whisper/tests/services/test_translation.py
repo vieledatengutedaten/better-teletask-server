@@ -6,7 +6,7 @@ they can be tested directly without mocking.
 """
 
 import pytest
-from app.services.translation import (
+from lib.services.translation import (
     parse_vtt_blocks,
     process_block_timestamps,
     group_blocks_into_chunks,

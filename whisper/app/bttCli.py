@@ -7,9 +7,9 @@ from app.db.api_keys import (
 )
 from app.db.vtt_files import getHighestTeletaskID, get_all_original_vtt_ids
 from app.db.lectures import get_all_lecture_ids
-from app.services.scraper import fetchBody, pingVideoByID
-from app.services.lecture_service import fetch_and_store_lecture_data
-from app.core.config import BASE_URL
+from lib.services.scraper import fetchBody, pingVideoByID
+from lib.services.lecture_service import fetch_and_store_lecture_data
+from lib.core.config import BASE_URL
 
 import hashlib
 import argparse

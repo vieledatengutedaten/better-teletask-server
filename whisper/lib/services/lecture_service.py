@@ -1,6 +1,6 @@
-from app.core.logger import logger
+from lib.core.logger import logger
 from app.db.lectures import add_lecture_data, get_language_of_lecture
-from app.services.scraper import scrape_mp4_url_from_teletaskid, scrape_lecture_data
+from lib.services.scraper import scrape_mp4_url_from_teletaskid, scrape_lecture_data
 from requests.models import Response
 
 

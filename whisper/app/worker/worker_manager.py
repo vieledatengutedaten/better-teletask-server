@@ -1,5 +1,5 @@
 from app.worker.worker import MockWorker, Worker
-from app.models.dataclasses import TranslationJob, TranscriptionJob
+from lib.models.dataclasses import TranslationJob, TranscriptionJob
 from app.worker.local.local_worker import LocalWorker
 
 class WorkerManager:
