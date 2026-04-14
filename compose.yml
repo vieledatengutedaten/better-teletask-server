@@ -21,7 +21,8 @@ services:
       - TZ=${TZ}
     volumes:
       - ./.env:/node/.env:ro
-      - ./api/logs:/node/logs
+      - ../logs:/node/logs
+      - ../static:/node/static
     ports:
     - "80:80"
     depends_on:

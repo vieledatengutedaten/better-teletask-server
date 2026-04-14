@@ -1,5 +1,8 @@
 import fastify, { FastifyInstance, FastifyReply, FastifyRequest, RawServerDefault } from 'fastify';
 import * as db from './database.js';
+import fastifyStatic from '@fastify/static';
+import path from 'node:path';
+import { access } from 'node:fs/promises';
 
 type SubRouteParams = { id: string; language?: string };
 
@@ -40,8 +43,39 @@ server.get('/ping', async () => {
   return 'pong\n';
 });
 
-server.get('/', async (_request, reply) => {
-  return reply.redirect('https://github.com/C0NZZ/better-teletask');
+// server.get('/', async (_request, reply) => {
+//   return reply.redirect('https://github.com/C0NZZ/better-teletask');
+// });
+
+const htmlRoot = path.resolve(process.cwd(), 'static');
+
+server.register(fastifyStatic, {
+  root: htmlRoot,
+  prefix: '/',
+});
+
+server.setNotFoundHandler(async (request, reply) => {
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    return reply.code(404).send({ error: 'Not Found' });
+  }
+
+  const pathname = decodeURIComponent(request.url.split('?')[0]);
+  const endpoint = pathname.replace(/^\/+|\/+$/g, '');
+  const fileName = endpoint ? `${endpoint}.html` : 'index.html';
+
+  const filePath = path.resolve(htmlRoot, fileName);
+
+  const relativePath = path.relative(htmlRoot, filePath);
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    return reply.code(400).send({ error: 'Bad Request' });
+  }
+
+  try {
+    await access(filePath);
+    return reply.type('text/html; charset=utf-8').sendFile(fileName);
+  } catch {
+    return reply.code(404).send({ error: 'Not Found' });
+  }
 });
 
 async function verifyAuthHeader(request: FastifyRequest<{ Params: SubRouteParams }, RawServerDefault>, reply: FastifyReply) {
