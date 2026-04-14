@@ -10,7 +10,7 @@ class TranscriptionParams(BaseModel):
     teletask_id: int
     initial_prompt: str | None = None
     asr_model : str | None = ASR_MODEL
-    precision_type: str | None = COMPUTE_TYPE
+    compute_type: str | None = COMPUTE_TYPE
 
 
 class TranscriptionResult(JobResultBase):
@@ -27,4 +27,4 @@ class TranscriptionJob(BaseJob):
     @override
     def model_post_init(self, __context: object) -> None:
         if not self.id:
-            self.id = f"tc-{self.params.teletask_id}"
+            self.id = f"tc-{self.params.teletask_id}-{self.params.asr_model}-{self.params.compute_type}"
