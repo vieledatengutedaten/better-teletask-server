@@ -4,7 +4,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from app.db.connection import get_session
 from app.db.error_handling import db_operation
 from app.db.schema import VttFileRecord
-from lib.models.dataclasses import VttFile
+from lib.models.domain import VttFile
 from lib.core.config import OUTPUT_PATH, ASR_MODEL, COMPUTE_TYPE
 
 from lib.core.logger import logger

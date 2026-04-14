@@ -1,25 +1,16 @@
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from typing import override
-from lib.models.dataclasses import TranscriptionJob, TranslationJob
+
+from lib.models.jobs import BaseJob, JobType
 
 
 class Worker(ABC):
-
     @abstractmethod
-    def transcribe(self, worker_id: str, jobs: list[TranscriptionJob]) -> None:
-        pass
-
-    @abstractmethod
-    def translate(self, worker_id: str, jobs: list[TranslationJob]) -> None:
-        pass
+    def run(self, worker_id: str, job_type: JobType, jobs: Sequence[BaseJob]) -> None: ...
 
 
 class MockWorker(Worker):
-
     @override
-    def transcribe(self, worker_id: str, jobs: list[TranscriptionJob]) -> None:
-        return
-
-    @override
-    def translate(self, worker_id: str, jobs: list[TranslationJob]) -> None:
+    def run(self, worker_id: str, job_type: JobType, jobs: Sequence[BaseJob]) -> None:
         return

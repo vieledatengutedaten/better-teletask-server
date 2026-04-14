@@ -3,13 +3,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from lib.core.logger import logger
-from lib.models.dataclasses import (
+from lib.models.jobs import (
     Job,
     JobResult,
     LogLevel,
     SchedulerStatuses,
 )
 from app.scheduler.job_handlers import get_job_handler
+from app.scheduler.pipeline import get_coordinator
 from app.scheduler.scheduler import Scheduler, get_scheduler
 
 
@@ -47,12 +48,23 @@ def _require_worker_owns_job(scheduler: Scheduler, worker_id: str, job_id: str) 
 async def _submit_result_common(
     job: Job,
     result: JobResult,
-) -> dict[str, str]:
+) -> dict[str, str | None]:
     handler = get_job_handler(job.job_type)
     await handler.handle_result(job, result)
 
     job.status = "COMPLETED"
-    return {"message": f"Result accepted for job {job.id}"}
+
+    try:
+        next_step = await get_coordinator().advance(
+            job.params.teletask_id, priority=job.priority
+        )
+    except RuntimeError:
+        next_step = None
+
+    return {
+        "message": f"Result accepted for job {job.id}",
+        "next_step": next_step,
+    }
 
 
 async def _report_failure_common(

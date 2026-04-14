@@ -3,10 +3,11 @@ from collections.abc import Mapping
 from typing import override
 
 from lib.core.logger import logger
-from lib.models.dataclasses import (
+from lib.models.jobs import (
     Job,
     JobResult,
     JobType,
+    ScrapeLectureDataResult,
     TranscriptionResult,
     TranslationResult,
 )
@@ -85,7 +86,31 @@ class TranslationJobHandler(JobHandler):
         logger.error(f"[mock] translation job {job.id} failed: {reason}")
 
 
+class ScrapeLectureDataJobHandler(JobHandler):
+    @override
+    def prepare(self, job: Job) -> bool:
+        logger.info(f"[mock] preparing scrape_lecture_data job {job.id}")
+        return True
+
+    @override
+    def parse_result(self, body: Mapping[str, object]) -> ScrapeLectureDataResult:
+        return ScrapeLectureDataResult.model_validate(body)
+
+    @override
+    async def handle_result(self, job: Job, result: JobResult) -> None:
+        if not isinstance(result, ScrapeLectureDataResult):
+            raise TypeError("ScrapeLectureDataJobHandler received non-scrape result")
+        logger.info(f"[mock] handled scrape_lecture_data result for {result.job_id}")
+
+    @override
+    async def handle_failed(self, job: Job, reason: str) -> None:
+        # TODO scrape failure leaves the pipeline dead for this teletask_id;
+        # revisit once blacklist/retry policy is decided.
+        logger.error(f"[mock] scrape_lecture_data job {job.id} failed: {reason}")
+
+
 _JOB_HANDLERS: dict[JobType, JobHandler] = {
+    "scrape_lecture_data": ScrapeLectureDataJobHandler(),
     "transcription": TranscriptionJobHandler(),
     "translation": TranslationJobHandler(),
 }

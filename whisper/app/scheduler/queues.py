@@ -1,26 +1,26 @@
 import asyncio
 from collections import deque
-from typing import Any, Callable, Sequence, cast, get_args
-from app.utils.broadcast import fire_broadcast
-from lib.models.dataclasses import (
-    Job,
-    ResourceCategory,
-    TranscriptionJob,
-    TranslationJob,
-)
+from collections.abc import Sequence
+from typing import Any, Callable, cast
 
-_RESOURCE_CATEGORIES: tuple[ResourceCategory, ...] = cast(
-    tuple[ResourceCategory, ...], get_args(ResourceCategory)
-)
+from app.utils.broadcast import fire_broadcast
+from app.scheduler.registry import JOB_TYPES
+from lib.models.jobs import BaseJob, JobType
+
+
+def _job_sort_key(job: BaseJob) -> tuple[int, int]:
+    """Sort by (priority DESC, teletask_id DESC). Larger tuple = head of queue."""
+    tid = cast(int, getattr(job.params, "teletask_id", 0))
+    return (job.priority, tid)
 
 
 class AsyncJobQueue:
     def __init__(
         self,
-        sort_key: Callable[[Job], Any] | None = None,
+        sort_key: Callable[[BaseJob], Any] | None = None,
         descending: bool = False,
     ):
-        self._queue: deque[Job] = deque()
+        self._queue: deque[BaseJob] = deque()
         self._lock = asyncio.Lock()
         self._sort_key = sort_key
         self._descending = descending
@@ -29,8 +29,8 @@ class AsyncJobQueue:
         if self._sort_key is None:
             return
 
-        keyed_jobs: list[tuple[Any, Job]] = []
-        unkeyed_jobs: list[Job] = []
+        keyed_jobs: list[tuple[Any, BaseJob]] = []
+        unkeyed_jobs: list[BaseJob] = []
 
         for job in self._queue:
             try:
@@ -46,8 +46,7 @@ class AsyncJobQueue:
         keyed_jobs.sort(key=lambda item: item[0], reverse=self._descending)
         self._queue = deque([job for _, job in keyed_jobs] + unkeyed_jobs)
 
-    async def add(self, job: Job) -> bool:
-        """Add a job to the queue. Returns False if a job with the same ID already exists."""
+    async def add(self, job: BaseJob) -> bool:
         async with self._lock:
             if any(j.id == job.id for j in self._queue):
                 return False
@@ -55,47 +54,39 @@ class AsyncJobQueue:
             self._apply_sort()
             return True
 
-    async def add_all(self, jobs: Sequence[Job]) -> int:
-        """Add multiple jobs. Returns number of successfully added jobs."""
+    async def add_all(self, jobs: Sequence[BaseJob]) -> int:
         if not jobs:
             return 0
 
         async with self._lock:
             existing_ids = {job.id for job in self._queue}
             added = 0
-
             for job in jobs:
                 if job.id in existing_ids:
                     continue
                 self._queue.append(job)
                 existing_ids.add(job.id)
                 added += 1
-
             if added > 0:
                 self._apply_sort()
-
             return added
 
-    async def dequeue(self) -> Job | None:
-        """Remove and return the first job (FIFO)."""
+    async def dequeue(self) -> BaseJob | None:
         async with self._lock:
             return self._queue.popleft() if self._queue else None
 
-    async def dequeue_n(self, n: int) -> list[Job]:
-        """Remove and return up to n jobs from the front."""
+    async def dequeue_n(self, n: int) -> list[BaseJob]:
         async with self._lock:
-            result = []
+            result: list[BaseJob] = []
             for _ in range(min(n, len(self._queue))):
                 result.append(self._queue.popleft())
             return result
 
-    async def peek(self) -> Job | None:
-        """Return the first job without removing it."""
+    async def peek(self) -> BaseJob | None:
         async with self._lock:
             return self._queue[0] if self._queue else None
 
-    async def remove_by_id(self, job_id: str) -> Job | None:
-        """Remove a job by its ID. Returns the removed job or None."""
+    async def remove_by_id(self, job_id: str) -> BaseJob | None:
         async with self._lock:
             for job in self._queue:
                 if job.id == job_id:
@@ -103,18 +94,16 @@ class AsyncJobQueue:
                     return job
             return None
 
-    async def remove_by_teletask_id(self, teletask_id: int) -> list[Job]:
-        """Remove all jobs matching a teletask_id. Returns removed jobs."""
+    async def remove_by_teletask_id(self, teletask_id: int) -> list[BaseJob]:
         async with self._lock:
-            def _job_teletask_id(job: Job) -> int | None:
+            def _job_teletask_id(job: BaseJob) -> int | None:
                 return cast(int | None, getattr(job.params, "teletask_id", None))
 
             removed = [j for j in self._queue if _job_teletask_id(j) == teletask_id]
             self._queue = deque(j for j in self._queue if _job_teletask_id(j) != teletask_id)
             return removed
 
-    async def get_all(self) -> list[Job]:
-        """Get a copy of all jobs."""
+    async def get_all(self) -> list[BaseJob]:
         async with self._lock:
             return list(self._queue)
 
@@ -128,128 +117,83 @@ class AsyncJobQueue:
 
 
 class QueueManager:
-    """Single entry point for all job queues.
+    """One queue per jobtype, sorted by (job.priority DESC, teletask_id DESC).
 
-    Two resource categories (whisper, ollama), each with a priority and normal queue.
-    Priority jobs are always dequeued before normal jobs within the same category.
+    Between-jobtype priority is NOT handled here — that's the scheduler's job
+    via JobTypeSpec.base_priority. This class only orders jobs within a single
+    jobtype's queue.
     """
 
     def __init__(self):
-        def normal_queue_sort_key(job: Job) -> Any:
-            return getattr(job.params, "teletask_id", None)
-
-        self._queues: dict[ResourceCategory, dict[str, AsyncJobQueue]] = {
-            cat: {
-                "priority": AsyncJobQueue(),
-                "normal": AsyncJobQueue(
-                    sort_key=normal_queue_sort_key,
-                    descending=True,
-                ),
-            }
-            for cat in _RESOURCE_CATEGORIES
+        self._queues: dict[JobType, AsyncJobQueue] = {
+            jt: AsyncJobQueue(sort_key=_job_sort_key, descending=True)
+            for jt in JOB_TYPES
         }
         self._job_available = asyncio.Event()
 
-    def _category_for(self, job: Job) -> ResourceCategory:
-        #TODO this is fucking ugly, maybe a dict mapping in dataclasses
-        if isinstance(job, TranscriptionJob):
-            return "whisper"
-        elif isinstance(job, TranslationJob):
-            return "ollama"
-        raise ValueError(f"Unknown job type: {type(job)}")
-
-    async def add(self, job: Job, priority: bool = False) -> bool:
-        """Add a job to the appropriate queue. Returns False if duplicate ID."""
-        category = self._category_for(job)
-        tier = "priority" if priority else "normal"
-        result = await self._queues[category][tier].add(job)
+    async def add(self, job: BaseJob) -> bool:
+        result = await self._queues[job.job_type].add(job)
         if result:
             self._job_available.set()
             fire_broadcast()
         return result
 
-    async def add_all(self, jobs: Sequence[Job], priority: bool = False) -> int:
-        """Add multiple jobs to the appropriate queues. Returns number of added jobs."""
+    async def add_all(self, jobs: Sequence[BaseJob]) -> int:
         if not jobs:
             return 0
 
-        grouped: dict[ResourceCategory, list[Job]] = {cat: [] for cat in _RESOURCE_CATEGORIES}
+        grouped: dict[JobType, list[BaseJob]] = {jt: [] for jt in JOB_TYPES}
         for job in jobs:
-            grouped[self._category_for(job)].append(job)
+            grouped[job.job_type].append(job)
 
-        tier = "priority" if priority else "normal"
-        added_total = 0
-        for category, grouped_jobs in grouped.items():
-            if not grouped_jobs:
+        added = 0
+        for jt, jt_jobs in grouped.items():
+            if not jt_jobs:
                 continue
-            added_total += await self._queues[category][tier].add_all(grouped_jobs)
+            added += await self._queues[jt].add_all(jt_jobs)
 
-        if added_total > 0:
+        if added > 0:
             self._job_available.set()
             fire_broadcast()
+        return added
 
-        return added_total
+    async def next(self, job_type: JobType, n: int = 1) -> list[BaseJob]:
+        return await self._queues[job_type].dequeue_n(n)
 
-    async def winning_category(self) -> ResourceCategory | None:
-        """Return the category with the highest-priority pending job.
+    async def has_pending(self, job_type: JobType) -> bool:
+        return await self._queues[job_type].size() > 0
 
-        Priority order: whisper priority > ollama priority > whisper normal > ollama normal.
-        Returns None if all queues are empty.
-        """
-        for category in _RESOURCE_CATEGORIES:
-            if await self._queues[category]["priority"].size() > 0:
-                return category
-        for category in _RESOURCE_CATEGORIES:
-            if await self._queues[category]["normal"].size() > 0:
-                return category
+    async def pending_teletask_ids(self, job_type: JobType) -> set[int]:
+        all_jobs = await self._queues[job_type].get_all()
+        return {
+            cast(int, getattr(j.params, "teletask_id", 0))
+            for j in all_jobs
+        }
+
+    async def remove_by_id(self, job_id: str) -> BaseJob | None:
+        for queue in self._queues.values():
+            job = await queue.remove_by_id(job_id)
+            if job is not None:
+                return job
         return None
 
-    async def next(self, category: ResourceCategory, n: int = 1) -> list[Job]:
-        """Get the next n jobs for a category (priority first, then normal)."""
-        prio_q = self._queues[category]["priority"]
-        normal_q = self._queues[category]["normal"]
-
-        jobs = await prio_q.dequeue_n(n)
-        remaining = n - len(jobs)
-        if remaining > 0:
-            jobs.extend(await normal_q.dequeue_n(remaining))
-        return jobs
-
-    async def remove_by_id(self, job_id: str) -> Job | None:
-        """Remove a job by ID from any queue."""
-        for category in self._queues.values():
-            for queue in category.values():
-                job = await queue.remove_by_id(job_id)
-                if job is not None:
-                    return job
-        return None
-
-    async def remove_by_teletask_id(self, teletask_id: int) -> list[Job]:
-        """Remove all jobs matching a teletask_id from all queues."""
-        removed = []
-        for category in self._queues.values():
-            for queue in category.values():
-                removed.extend(await queue.remove_by_teletask_id(teletask_id))
+    async def remove_by_teletask_id(self, teletask_id: int) -> list[BaseJob]:
+        removed: list[BaseJob] = []
+        for queue in self._queues.values():
+            removed.extend(await queue.remove_by_teletask_id(teletask_id))
         return removed
 
-    async def get_all(self, category: ResourceCategory | None = None) -> list[Job]:
-        """Get all jobs, optionally filtered by category."""
-        result: list[Any] = []
-        for cat in (category,) if category else _RESOURCE_CATEGORIES:
-            for queue in self._queues[cat].values():
-                result.extend(await queue.get_all())
+    async def get_all(self, job_type: JobType | None = None) -> list[BaseJob]:
+        result: list[BaseJob] = []
+        targets: tuple[JobType, ...] = (job_type,) if job_type else tuple(self._queues.keys())
+        for jt in targets:
+            result.extend(await self._queues[jt].get_all())
         return result
 
     async def snapshot(self) -> dict[str, int]:
-        """Return queue sizes per category and tier."""
-        result: dict[str, int] = {}
-        for cat in _RESOURCE_CATEGORIES:
-            for tier in ("priority", "normal"):
-                result[f"{cat}_{tier}"] = await self._queues[cat][tier].size()
-        return result
+        return {jt: await self._queues[jt].size() for jt in self._queues}
 
     async def wait_for_job(self, timeout: float = 120) -> bool:
-        """Wait until a job is available or timeout. Returns True if a job was signaled."""
         self._job_available.clear()
         try:
             await asyncio.wait_for(self._job_available.wait(), timeout=timeout)
@@ -258,5 +202,4 @@ class QueueManager:
             return False
 
 
-# Global instance
 queue_manager = QueueManager()

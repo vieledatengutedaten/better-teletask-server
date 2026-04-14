@@ -13,7 +13,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.api.scheduling_routes import schedule_router
-from lib.models.dataclasses import TranscriptionJob, TranscriptionParams
+from lib.models.jobs import TranscriptionJob, TranscriptionParams
 
 
 @pytest.fixture
@@ -42,7 +42,7 @@ class TestGetQueues:
         whisper_job = TranscriptionJob(params=TranscriptionParams(teletask_id=100))
         active_job = TranscriptionJob(params=TranscriptionParams(teletask_id=200))
 
-        mock_queue_manager.get_all = AsyncMock(side_effect=[[whisper_job], []])
+        mock_queue_manager.get_all = AsyncMock(side_effect=[[], [whisper_job], []])
         mock_get_scheduler.return_value = SimpleNamespace(active_jobs=[active_job])
 
         response = client.get("/queues")
@@ -51,6 +51,7 @@ class TestGetQueues:
         data = response.json()
         assert len(data["whisper"]) == 1
         assert len(data["ollama"]) == 0
+        assert len(data["cpu"]) == 0
         assert len(data["active"]) == 1
         assert data["whisper"][0]["params"]["teletask_id"] == 100
         assert data["active"][0]["params"]["teletask_id"] == 200
@@ -60,7 +61,7 @@ class TestGetQueues:
     def test_returns_empty_active_when_scheduler_unavailable(
         self, _mock_get_scheduler, mock_queue_manager, client
     ):
-        mock_queue_manager.get_all = AsyncMock(side_effect=[[], []])
+        mock_queue_manager.get_all = AsyncMock(side_effect=[[], [], []])
 
         response = client.get("/queues")
         assert response.status_code == 200
@@ -70,51 +71,80 @@ class TestGetQueues:
 class TestGetScheduler:
     @patch("app.api.scheduling_routes.get_scheduler")
     def test_returns_scheduler_snapshot(self, mock_get_scheduler, client):
-        mock_get_scheduler.return_value = SimpleNamespace(
-            snapshot=lambda: {
-                "max_workers": 5,
-                "batch_size": 10,
-                "available_capacity": 3,
-                "active_worker_count": 2,
-                "active_workers": {"worker-1": [], "worker-2": []},
-                "jobs_by_id": {},
-            }
-        )
+        snapshot = {
+            "resources": {
+                "whisper": {
+                    "max_workers": 2,
+                    "available_capacity": 1,
+                    "active_workers": {"worker-1": []},
+                },
+                "ollama": {
+                    "max_workers": 3,
+                    "available_capacity": 3,
+                    "active_workers": {},
+                },
+                "cpu": {
+                    "max_workers": 8,
+                    "available_capacity": 8,
+                    "active_workers": {},
+                },
+            },
+            "jobs_by_id": {},
+        }
+        mock_get_scheduler.return_value = SimpleNamespace(snapshot=lambda: snapshot)
 
         response = client.get("/scheduler")
         assert response.status_code == 200
 
         data = response.json()
-        assert data["max_workers"] == 5
-        assert data["batch_size"] == 10
-        assert data["available_capacity"] == 3
-        assert data["active_worker_count"] == 2
-        assert set(data["active_workers"].keys()) == {"worker-1", "worker-2"}
+        assert data["resources"]["whisper"]["max_workers"] == 2
+        assert data["resources"]["ollama"]["available_capacity"] == 3
+        assert "worker-1" in data["resources"]["whisper"]["active_workers"]
 
     @patch("app.api.scheduling_routes.get_scheduler", side_effect=RuntimeError("not initialized"))
     def test_returns_empty_snapshot_when_scheduler_unavailable(self, _mock_get_scheduler, client):
+        from app.scheduler.registry import RESOURCES
+
         response = client.get("/scheduler")
         assert response.status_code == 200
-        assert response.json() == {
-            "max_workers": 0,
-            "batch_size": 0,
-            "available_capacity": 0,
-            "active_worker_count": 0,
-            "active_workers": {},
-            "jobs_by_id": {},
-        }
+        data = response.json()
+        assert data["jobs_by_id"] == {}
+        for resource, spec in RESOURCES.items():
+            assert data["resources"][resource]["max_workers"] == spec.max_workers
+            assert data["resources"][resource]["available_capacity"] == 0
+            assert data["resources"][resource]["active_workers"] == {}
 
 
 class TestPrioritize:
+    @patch("app.api.scheduling_routes.get_coordinator")
     @patch("app.api.scheduling_routes.queue_manager")
     @patch("app.api.scheduling_routes.pingVideoByID", return_value="200")
-    def test_prioritize_available_id(self, _mock_ping, mock_queue_manager, client):
+    def test_prioritize_available_id(
+        self, _mock_ping, mock_queue_manager, mock_get_coordinator, client
+    ):
         mock_queue_manager.remove_by_teletask_id = AsyncMock(return_value=[])
-        mock_queue_manager.add = AsyncMock(return_value=True)
+        coordinator = SimpleNamespace(advance=AsyncMock(return_value="scrape"))
+        mock_get_coordinator.return_value = coordinator
 
         response = client.post("/prioritize/11401")
         assert response.status_code == 200
         assert "prioritized" in response.json()["message"]
+        coordinator.advance.assert_awaited_once_with(11401, priority=1)
+
+    @patch("app.api.scheduling_routes.get_coordinator")
+    @patch("app.api.scheduling_routes.queue_manager")
+    @patch("app.api.scheduling_routes.pingVideoByID", return_value="200")
+    def test_prioritize_returns_complete_when_pipeline_done(
+        self, _mock_ping, mock_queue_manager, mock_get_coordinator, client
+    ):
+        mock_queue_manager.remove_by_teletask_id = AsyncMock(return_value=[])
+        mock_get_coordinator.return_value = SimpleNamespace(
+            advance=AsyncMock(return_value=None)
+        )
+
+        response = client.post("/prioritize/11401")
+        assert response.status_code == 200
+        assert "already complete" in response.json()["message"]
 
     @patch("app.api.scheduling_routes.pingVideoByID", return_value="404")
     def test_prioritize_unavailable_id(self, _mock_ping, client):

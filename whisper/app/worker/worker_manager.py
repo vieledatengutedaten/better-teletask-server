@@ -1,22 +1,22 @@
+from collections.abc import Sequence
+
 from app.worker.worker import MockWorker, Worker
-from lib.models.dataclasses import TranslationJob, TranscriptionJob
 from app.worker.local.local_worker import LocalWorker
+from app.scheduler.registry import JOB_TYPES, RESOURCES
+from lib.models.jobs import BaseJob, JobType, ResourceType
+
 
 class WorkerManager:
-    transcribeWorker: Worker
-    translateWorker: Worker
+    workers: dict[ResourceType, Worker]
 
-    def __init__(self, transcribeWorker: Worker | None = None, translateWorker: Worker | None = None):
-        self.transcribeWorker = transcribeWorker or LocalWorker()
-        self.translateWorker = translateWorker or LocalWorker()
+    def __init__(self, workers: dict[ResourceType, Worker] | None = None):
+        self.workers = workers if workers is not None else {r: LocalWorker() for r in RESOURCES}
 
-    def translate(self, worker_id: str, jobs: list[TranslationJob]) -> None:
-        self.translateWorker.translate(worker_id=worker_id, jobs=jobs)
+    def dispatch(self, worker_id: str, job_type: JobType, jobs: Sequence[BaseJob]) -> None:
+        resource = JOB_TYPES[job_type].resource
+        self.workers[resource].run(worker_id, job_type, jobs)
 
-    def transcribe(self, worker_id: str, jobs: list[TranscriptionJob]) -> None:
-        self.transcribeWorker.transcribe(worker_id=worker_id, jobs=jobs)
 
 class MockWorkerManager(WorkerManager):
-
     def __init__(self):
-        super().__init__(transcribeWorker=MockWorker(), translateWorker=MockWorker())
+        super().__init__(workers={r: MockWorker() for r in RESOURCES})

@@ -1,4 +1,4 @@
-from lib.models.dataclasses import (
+from lib.models.domain import (
     SeriesData,
     LecturerData,
     LectureData,

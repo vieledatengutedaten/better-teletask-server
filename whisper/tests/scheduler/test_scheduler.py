@@ -5,32 +5,41 @@ Tests for scheduler/scheduler.py — Scheduler
 import asyncio
 
 import pytest
-from lib.models.dataclasses import (
+
+from lib.models.jobs import (
+    BaseJob,
+    JobType,
     TranscriptionJob,
     TranscriptionParams,
     TranslationJob,
     TranslationParams,
 )
 from app.scheduler.queues import QueueManager
+from app.scheduler.registry import JOB_TYPES, RESOURCES, JobTypeSpec, ResourceSpec
 from app.scheduler.job_handlers import get_job_handler
 from app.scheduler.scheduler import Scheduler
 from app.worker.worker_manager import WorkerManager
 from app.worker.worker import Worker
 
 
-def make_transcription(teletask_id: int = 1) -> TranscriptionJob:
+def make_transcription(teletask_id: int = 1, priority: int = 0) -> TranscriptionJob:
     return TranscriptionJob(
         params=TranscriptionParams(teletask_id=teletask_id),
+        priority=priority,
     )
 
 
 def make_translation(
-    teletask_id: int = 1, from_lang: str = "en", to_lang: str = "de"
+    teletask_id: int = 1,
+    from_lang: str = "en",
+    to_lang: str = "de",
+    priority: int = 0,
 ) -> TranslationJob:
     return TranslationJob(
         params=TranslationParams(
             teletask_id=teletask_id, from_language=from_lang, to_language=to_lang
         ),
+        priority=priority,
     )
 
 
@@ -38,20 +47,22 @@ class FakeWorker(Worker):
     """Records dispatched batches for assertions."""
 
     def __init__(self) -> None:
-        self.transcribe_calls: list[list[TranscriptionJob]] = []
-        self.translate_calls: list[list[TranslationJob]] = []
-        self.dispatch_order: list[list[TranscriptionJob] | list[TranslationJob]] = []
+        self.calls_by_jobtype: dict[JobType, list[list[BaseJob]]] = {}
+        self.dispatch_order: list[list[BaseJob]] = []
         self.worker_ids: list[str] = []
 
-    def transcribe(self, worker_id: str, jobs: list[TranscriptionJob]) -> None:
+    def run(self, worker_id: str, job_type: JobType, jobs: list[BaseJob]) -> None:
         self.worker_ids.append(worker_id)
-        self.transcribe_calls.append(jobs)
+        self.calls_by_jobtype.setdefault(job_type, []).append(jobs)
         self.dispatch_order.append(jobs)
 
-    def translate(self, worker_id: str, jobs: list[TranslationJob]) -> None:
-        self.worker_ids.append(worker_id)
-        self.translate_calls.append(jobs)
-        self.dispatch_order.append(jobs)
+    @property
+    def transcribe_calls(self) -> list[list[BaseJob]]:
+        return self.calls_by_jobtype.get("transcription", [])
+
+    @property
+    def translate_calls(self) -> list[list[BaseJob]]:
+        return self.calls_by_jobtype.get("translation", [])
 
 
 @pytest.fixture
@@ -65,41 +76,86 @@ def fake_worker() -> FakeWorker:
 
 
 @pytest.fixture
-def scheduler(queue_manager: QueueManager, fake_worker: FakeWorker) -> Scheduler:
+def fake_worker_manager(fake_worker: FakeWorker) -> WorkerManager:
+    return WorkerManager(workers={r: fake_worker for r in RESOURCES})
+
+
+@pytest.fixture
+def scheduler(
+    queue_manager: QueueManager, fake_worker_manager: WorkerManager
+) -> Scheduler:
     return Scheduler(
         queue_manager=queue_manager,
-        max_workers=3,
-        batch_size=5,
-        worker_manager=WorkerManager(
-            transcribeWorker=fake_worker,
-            translateWorker=fake_worker,
-        ),
+        worker_manager=fake_worker_manager,
     )
+
+
+@pytest.fixture
+def override_resources(monkeypatch: pytest.MonkeyPatch):
+    """Helper to override RESOURCES.max_workers in-place for a test."""
+
+    def _apply(**limits: int) -> None:
+        for resource, max_workers in limits.items():
+            monkeypatch.setitem(
+                RESOURCES,
+                resource,
+                ResourceSpec(resource=resource, max_workers=max_workers),
+            )
+
+    return _apply
+
+
+@pytest.fixture
+def override_batch_size(monkeypatch: pytest.MonkeyPatch):
+    """Helper to override JOB_TYPES[jt].batch_size in-place for a test."""
+
+    def _apply(**sizes: int) -> None:
+        for jt, batch_size in sizes.items():
+            current = JOB_TYPES[jt]
+            monkeypatch.setitem(
+                JOB_TYPES,
+                jt,
+                JobTypeSpec(
+                    job_type=current.job_type,
+                    resource=current.resource,
+                    job_cls=current.job_cls,
+                    result_cls=current.result_cls,
+                    handler=current.handler,
+                    batch_size=batch_size,
+                    base_priority=current.base_priority,
+                ),
+            )
+
+    return _apply
 
 
 class TestCapacity:
     @pytest.mark.asyncio
-    async def test_initial_capacity(self, scheduler: Scheduler) -> None:
-        assert scheduler.available_capacity == 3
+    async def test_initial_capacity_per_resource(self, scheduler: Scheduler) -> None:
+        assert scheduler.capacity_for("whisper") == RESOURCES["whisper"].max_workers
+        assert scheduler.capacity_for("ollama") == RESOURCES["ollama"].max_workers
+        assert scheduler.capacity_for("cpu") == RESOURCES["cpu"].max_workers
 
     @pytest.mark.asyncio
     async def test_dispatch_reduces_capacity(
         self, scheduler: Scheduler, queue_manager: QueueManager
     ) -> None:
+        whisper_cap = scheduler.capacity_for("whisper")
         await queue_manager.add(make_transcription(1))
         dispatched = await scheduler._dispatch_available()
         assert dispatched == 1
-        assert scheduler.available_capacity == 2
+        assert scheduler.capacity_for("whisper") == whisper_cap - 1
 
     @pytest.mark.asyncio
     async def test_worker_finished_restores_capacity(
         self, scheduler: Scheduler, queue_manager: QueueManager
     ) -> None:
+        whisper_cap = scheduler.capacity_for("whisper")
         await queue_manager.add(make_transcription(1))
         await scheduler._dispatch_available()
-        worker_id = list(scheduler._active_workers.keys())[0]
+        worker_id = next(iter(scheduler._active["whisper"].keys()))
         scheduler.worker_finished(worker_id)
-        assert scheduler.available_capacity == 3
+        assert scheduler.capacity_for("whisper") == whisper_cap
 
     @pytest.mark.asyncio
     async def test_worker_finished_unknown_returns_none(
@@ -112,8 +168,15 @@ class TestCapacity:
 class TestBatching:
     @pytest.mark.asyncio
     async def test_batch_respects_batch_size(
-        self, scheduler: Scheduler, queue_manager: QueueManager, fake_worker: FakeWorker
+        self,
+        scheduler: Scheduler,
+        queue_manager: QueueManager,
+        fake_worker: FakeWorker,
+        override_batch_size,
+        override_resources,
     ) -> None:
+        override_resources(whisper=3)
+        override_batch_size(transcription=5)
         for i in range(8):
             await queue_manager.add(make_transcription(i))
         await scheduler._dispatch_available()
@@ -123,15 +186,19 @@ class TestBatching:
         assert len(fake_worker.transcribe_calls[1]) == 3
 
     @pytest.mark.asyncio
-    async def test_batch_same_category(
-        self, scheduler: Scheduler, queue_manager: QueueManager, fake_worker: FakeWorker
+    async def test_batch_same_jobtype(
+        self,
+        scheduler: Scheduler,
+        queue_manager: QueueManager,
+        fake_worker: FakeWorker,
+        override_batch_size,
     ) -> None:
-        """All jobs in a batch must be from the same resource category."""
+        """All jobs in a batch must be from the same jobtype."""
+        override_batch_size(transcription=5)
         for i in range(3):
             await queue_manager.add(make_transcription(i))
         await queue_manager.add(make_translation(10))
         await scheduler._dispatch_available()
-        # First worker: 3 transcriptions, second worker: 1 translation
         assert len(fake_worker.transcribe_calls) == 1
         assert len(fake_worker.translate_calls) == 1
         assert len(fake_worker.transcribe_calls[0]) == 3
@@ -143,25 +210,20 @@ class TestBatching:
     ) -> None:
         dispatched = await scheduler._dispatch_available()
         assert dispatched == 0
-        assert len(fake_worker.transcribe_calls) == 0
-        assert len(fake_worker.translate_calls) == 0
+        assert fake_worker.dispatch_order == []
 
     @pytest.mark.asyncio
     async def test_prepare_rejection_is_replaced_in_same_batch(
         self,
+        scheduler: Scheduler,
         queue_manager: QueueManager,
         fake_worker: FakeWorker,
         monkeypatch: pytest.MonkeyPatch,
+        override_batch_size,
+        override_resources,
     ) -> None:
-        sched = Scheduler(
-            queue_manager=queue_manager,
-            max_workers=1,
-            batch_size=3,
-            worker_manager=WorkerManager(
-                transcribeWorker=fake_worker,
-                translateWorker=fake_worker,
-            ),
-        )
+        override_resources(whisper=1)
+        override_batch_size(transcription=3)
 
         for teletask_id in [1, 2, 3, 4, 5]:
             await queue_manager.add(make_transcription(teletask_id))
@@ -173,7 +235,7 @@ class TestBatching:
             lambda job: job.params.teletask_id != 3,
         )
 
-        dispatched = await sched._dispatch_available()
+        dispatched = await scheduler._dispatch_available()
 
         assert dispatched == 1
         assert len(fake_worker.transcribe_calls) == 1
@@ -185,19 +247,15 @@ class TestBatching:
     @pytest.mark.asyncio
     async def test_all_prepare_rejected_dispatches_nothing(
         self,
+        scheduler: Scheduler,
         queue_manager: QueueManager,
         fake_worker: FakeWorker,
         monkeypatch: pytest.MonkeyPatch,
+        override_batch_size,
+        override_resources,
     ) -> None:
-        sched = Scheduler(
-            queue_manager=queue_manager,
-            max_workers=1,
-            batch_size=2,
-            worker_manager=WorkerManager(
-                transcribeWorker=fake_worker,
-                translateWorker=fake_worker,
-            ),
-        )
+        override_resources(whisper=1)
+        override_batch_size(transcription=2)
 
         await queue_manager.add(make_transcription(1))
         await queue_manager.add(make_transcription(2))
@@ -205,114 +263,150 @@ class TestBatching:
         handler = get_job_handler("transcription")
         monkeypatch.setattr(handler, "prepare", lambda job: False)
 
-        dispatched = await sched._dispatch_available()
+        dispatched = await scheduler._dispatch_available()
 
         assert dispatched == 0
         assert len(fake_worker.transcribe_calls) == 0
-        assert sched.available_capacity == 1
+        assert scheduler.capacity_for("whisper") == 1
 
 
 class TestPriority:
     @pytest.mark.asyncio
-    async def test_whisper_priority_before_ollama_priority(
-        self, scheduler: Scheduler, queue_manager: QueueManager, fake_worker: FakeWorker
+    async def test_higher_base_priority_jobtype_picked_first(
+        self,
+        scheduler: Scheduler,
+        queue_manager: QueueManager,
+        fake_worker: FakeWorker,
     ) -> None:
-        await queue_manager.add(make_translation(1), priority=True)
-        await queue_manager.add(make_transcription(2), priority=True)
+        """Transcription has higher base_priority than translation."""
+        await queue_manager.add(make_translation(1))
+        await queue_manager.add(make_transcription(2))
         await scheduler._dispatch_available()
-        # whisper prio dispatched first
-        assert len(fake_worker.transcribe_calls) == 1
-        assert len(fake_worker.translate_calls) == 1
-        assert fake_worker.transcribe_calls[0][0].params.teletask_id == 2
+        # Transcription dispatched first
+        assert fake_worker.dispatch_order[0][0].job_type == "transcription"
 
     @pytest.mark.asyncio
-    async def test_priority_before_normal(
-        self, scheduler: Scheduler, queue_manager: QueueManager, fake_worker: FakeWorker
+    async def test_priority_field_orders_within_jobtype(
+        self,
+        scheduler: Scheduler,
+        queue_manager: QueueManager,
+        fake_worker: FakeWorker,
+        override_batch_size,
     ) -> None:
-        await queue_manager.add(make_transcription(1), priority=False)
-        await queue_manager.add(make_transcription(2), priority=True)
+        override_batch_size(transcription=2)
+        await queue_manager.add(make_transcription(1, priority=0))
+        await queue_manager.add(make_transcription(2, priority=1))
         await scheduler._dispatch_available()
-        # Both end up in one batch (same category), priority dequeued first
-        assert len(fake_worker.transcribe_calls) == 1
         batch = fake_worker.transcribe_calls[0]
         assert batch[0].params.teletask_id == 2
         assert batch[1].params.teletask_id == 1
 
     @pytest.mark.asyncio
-    async def test_whisper_priority_before_ollama_normal(
-        self, scheduler: Scheduler, queue_manager: QueueManager, fake_worker: FakeWorker
-    ) -> None:
-        await queue_manager.add(make_translation(1), priority=False)
-        await queue_manager.add(make_transcription(2), priority=True)
-        await scheduler._dispatch_available()
-        # whisper prio dispatched before ollama normal
-        assert fake_worker.transcribe_calls[0][0].params.teletask_id == 2
-
-    @pytest.mark.asyncio
     async def test_full_priority_order(
         self,
+        scheduler: Scheduler,
         queue_manager: QueueManager,
         fake_worker: FakeWorker,
+        override_batch_size,
+        override_resources,
     ) -> None:
-        """With max_workers=4 and batch_size=1, each dispatch is one job, revealing exact order."""
-        sched = Scheduler(
-            queue_manager=queue_manager,
-            max_workers=4,
-            batch_size=1,
-            worker_manager=WorkerManager(
-                transcribeWorker=fake_worker,
-                translateWorker=fake_worker,
-            ),
-        )
-        # Add in reverse priority order
-        await queue_manager.add(make_translation(4), priority=False)   # ollama normal (lowest)
-        await queue_manager.add(make_transcription(3), priority=False) # whisper normal
-        await queue_manager.add(make_translation(2), priority=True)    # ollama priority
-        await queue_manager.add(make_transcription(1), priority=True)  # whisper priority (highest)
+        """With batch_size=1, each dispatch is one job, revealing exact order."""
+        override_resources(whisper=2, ollama=2)
+        override_batch_size(transcription=1, translation=1)
 
-        await sched._dispatch_available()
+        await queue_manager.add(make_translation(4, priority=0))   # translation normal (lowest)
+        await queue_manager.add(make_transcription(3, priority=0)) # transcription normal
+        await queue_manager.add(make_translation(2, priority=1))   # translation priority
+        await queue_manager.add(make_transcription(1, priority=1)) # transcription priority (highest)
 
-        dispatched_ids = [call[0].params.teletask_id for call in fake_worker.dispatch_order]
-        # Order: whisper prio(1), ollama prio(2), whisper normal(3), ollama normal(4)
-        assert dispatched_ids == [1, 2, 3, 4]
+        await scheduler._dispatch_available()
+
+        # Transcription has higher base_priority, drained until whisper full or queue empty.
+        # Whisper has 2 capacity → both transcription jobs dispatch first (priority=1 then priority=0).
+        # Then translation (only ollama left) → priority=1 then priority=0.
+        dispatched_jts = [batch[0].job_type for batch in fake_worker.dispatch_order]
+        dispatched_tids = [batch[0].params.teletask_id for batch in fake_worker.dispatch_order]
+        assert dispatched_jts[:2] == ["transcription", "transcription"]
+        assert dispatched_tids[:2] == [1, 3]
+        assert dispatched_jts[2:] == ["translation", "translation"]
+        assert dispatched_tids[2:] == [2, 4]
 
 
-class TestMaxWorkers:
+class TestPerResourceCapacity:
     @pytest.mark.asyncio
-    async def test_capacity_limits_dispatches(
-        self, scheduler: Scheduler, queue_manager: QueueManager, fake_worker: FakeWorker
+    async def test_capacity_limits_dispatches_per_resource(
+        self,
+        scheduler: Scheduler,
+        queue_manager: QueueManager,
+        fake_worker: FakeWorker,
+        override_batch_size,
+        override_resources,
     ) -> None:
-        """max_workers=3 means at most 3 workers, not 3 jobs."""
+        override_resources(whisper=3)
+        override_batch_size(transcription=5)
         for i in range(20):
             await queue_manager.add(make_transcription(i))
         await scheduler._dispatch_available()
         # batch_size=5, max_workers=3 → 3 workers dispatched with 5+5+5 jobs
         assert len(fake_worker.transcribe_calls) == 3
-        assert scheduler.available_capacity == 0
-        # 5 jobs remain in queue
-        assert len(await queue_manager.get_all("whisper")) == 5
+        assert scheduler.capacity_for("whisper") == 0
+        # 5 jobs remain in transcription queue
+        assert len(await queue_manager.get_all("transcription")) == 5
 
     @pytest.mark.asyncio
     async def test_no_dispatch_at_zero_capacity(
-        self, scheduler: Scheduler, queue_manager: QueueManager, fake_worker: FakeWorker
+        self,
+        scheduler: Scheduler,
+        queue_manager: QueueManager,
+        fake_worker: FakeWorker,
+        override_batch_size,
+        override_resources,
     ) -> None:
-        # Fill all worker slots
+        override_resources(whisper=3)
+        override_batch_size(transcription=5)
         for i in range(15):
             await queue_manager.add(make_transcription(i))
         await scheduler._dispatch_available()
-        assert scheduler.available_capacity == 0
+        assert scheduler.capacity_for("whisper") == 0
 
-        # Add more jobs — dispatch should do nothing
         await queue_manager.add(make_transcription(99))
         dispatched = await scheduler._dispatch_available()
         assert dispatched == 0
+
+    @pytest.mark.asyncio
+    async def test_one_resource_full_does_not_block_another(
+        self,
+        scheduler: Scheduler,
+        queue_manager: QueueManager,
+        fake_worker: FakeWorker,
+        override_batch_size,
+        override_resources,
+    ) -> None:
+        """Whisper at capacity must not stop translation jobs from dispatching to ollama."""
+        override_resources(whisper=1, ollama=2)
+        override_batch_size(transcription=1, translation=1)
+
+        await queue_manager.add(make_transcription(1))
+        await queue_manager.add(make_translation(10))
+        await queue_manager.add(make_translation(11))
+
+        await scheduler._dispatch_available()
+
+        assert scheduler.capacity_for("whisper") == 0
+        assert scheduler.capacity_for("ollama") == 0
+        assert len(fake_worker.transcribe_calls) == 1
+        assert len(fake_worker.translate_calls) == 2
 
 
 class TestActiveJobs:
     @pytest.mark.asyncio
     async def test_active_jobs_lists_all(
-        self, scheduler: Scheduler, queue_manager: QueueManager
+        self,
+        scheduler: Scheduler,
+        queue_manager: QueueManager,
+        override_batch_size,
     ) -> None:
+        override_batch_size(transcription=5)
         for i in range(3):
             await queue_manager.add(make_transcription(i))
         await scheduler._dispatch_available()
@@ -323,6 +417,21 @@ class TestActiveJobs:
     async def test_active_jobs_empty_initially(self, scheduler: Scheduler) -> None:
         assert scheduler.active_jobs == []
 
+    @pytest.mark.asyncio
+    async def test_active_teletask_ids_filtered_by_jobtype(
+        self,
+        scheduler: Scheduler,
+        queue_manager: QueueManager,
+        override_batch_size,
+    ) -> None:
+        override_batch_size(transcription=2, translation=2)
+        await queue_manager.add(make_transcription(1))
+        await queue_manager.add(make_transcription(2))
+        await queue_manager.add(make_translation(99))
+        await scheduler._dispatch_available()
+        assert scheduler.active_teletask_ids("transcription") == {1, 2}
+        assert scheduler.active_teletask_ids("translation") == {99}
+
 
 class TestJobIndex:
     @pytest.mark.asyncio
@@ -331,7 +440,6 @@ class TestJobIndex:
     ) -> None:
         job = make_transcription(42)
         await queue_manager.add(job)
-
         await scheduler._dispatch_available()
 
         found = scheduler.get_job(job.id)
@@ -351,7 +459,7 @@ class TestJobIndex:
         await queue_manager.add(job)
         await scheduler._dispatch_available()
 
-        worker_id = list(scheduler._active_workers.keys())[0]
+        worker_id = next(iter(scheduler._active["ollama"].keys()))
         finished_jobs = scheduler.worker_finished(worker_id)
 
         assert finished_jobs is not None
@@ -362,13 +470,16 @@ class TestJobIndex:
 
     @pytest.mark.asyncio
     async def test_worker_finished_for_job_removes_owning_worker_batch(
-        self, scheduler: Scheduler, queue_manager: QueueManager
+        self,
+        scheduler: Scheduler,
+        queue_manager: QueueManager,
+        override_batch_size,
     ) -> None:
+        override_batch_size(transcription=2)
         job1 = make_transcription(101)
         job2 = make_transcription(102)
         await queue_manager.add(job1)
         await queue_manager.add(job2)
-
         await scheduler._dispatch_available()
 
         finished_jobs = scheduler.worker_finished_for_job(job1.id)
@@ -405,25 +516,25 @@ class TestWake:
 
     @pytest.mark.asyncio
     async def test_run_dispatches_and_wakes(
-        self, scheduler: Scheduler, queue_manager: QueueManager, fake_worker: FakeWorker
+        self,
+        scheduler: Scheduler,
+        queue_manager: QueueManager,
+        fake_worker: FakeWorker,
     ) -> None:
-        """run() should dispatch jobs, then wake when worker_finished is called."""
         await queue_manager.add(make_transcription(1))
 
         async def finish_after_delay() -> None:
             await asyncio.sleep(0.05)
-            worker_id = list(scheduler._active_workers.keys())[0]
+            worker_id = next(iter(scheduler._active["whisper"].keys()))
             scheduler.worker_finished(worker_id)
 
         async def run_scheduler() -> None:
-            # Run one iteration by adding a job and letting it dispatch,
-            # then cancel after the wake
             task = asyncio.create_task(scheduler.run())
-            await asyncio.sleep(0.02)  # let it dispatch
+            await asyncio.sleep(0.02)
             asyncio.create_task(finish_after_delay())
-            await asyncio.sleep(0.1)  # let it wake and loop
+            await asyncio.sleep(0.1)
             task.cancel()
 
         await run_scheduler()
         assert len(fake_worker.transcribe_calls) == 1
-        assert scheduler.available_capacity == 3
+        assert scheduler.capacity_for("whisper") == RESOURCES["whisper"].max_workers

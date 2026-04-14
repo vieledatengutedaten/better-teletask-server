@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Header, HTTPException, Depends
 from datetime import datetime
-from lib.models.dataclasses import SearchResult
+from lib.models.domain import SearchResult
 from app.db.vtt_lines import search_vtt_lines
 
 from lib.core.logger import logger

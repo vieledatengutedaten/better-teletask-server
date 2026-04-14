@@ -4,7 +4,7 @@ from sqlalchemy.dialects.postgresql import insert
 from app.db.connection import get_session
 from app.db.error_handling import db_operation
 from app.db.schema import ApiKeyRecord
-from lib.models.dataclasses import ApiKey
+from lib.models.domain import ApiKey
 
 from lib.core.logger import logger
 
