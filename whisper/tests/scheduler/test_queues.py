@@ -267,6 +267,32 @@ class TestQueueManager:
         assert await manager.add(j) is False
 
     @pytest.mark.asyncio
+    async def test_duplicate_rejected_while_job_is_claimed(self, manager):
+        original = make_transcription(7)
+        duplicate = make_transcription(7)
+
+        assert await manager.add(original) is True
+        claimed = await manager.next("transcription", n=1)
+        assert len(claimed) == 1
+        assert claimed[0].id == original.id
+
+        # Claimed jobs are deduplicated as active until explicitly released.
+        assert await manager.add(duplicate) is False
+
+    @pytest.mark.asyncio
+    async def test_released_claim_can_be_enqueued_again(self, manager):
+        original = make_transcription(8)
+        duplicate = make_transcription(8)
+
+        assert await manager.add(original) is True
+        claimed = await manager.next("transcription", n=1)
+        assert len(claimed) == 1
+
+        manager.release_all(claimed)
+
+        assert await manager.add(duplicate) is True
+
+    @pytest.mark.asyncio
     async def test_has_pending(self, manager):
         assert await manager.has_pending("transcription") is False
         await manager.add(make_transcription(1))

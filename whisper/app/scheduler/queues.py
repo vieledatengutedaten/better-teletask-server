@@ -121,7 +121,7 @@ class QueueManager:
 
     Between-jobtype priority is NOT handled here — that's the scheduler's job
     via JobTypeSpec.base_priority. This class only orders jobs within a single
-    jobtype's queue.
+    jobtype's queue, and deduplicates against both pending and in-flight jobs.
     """
 
     def __init__(self):
@@ -129,9 +129,13 @@ class QueueManager:
             jt: AsyncJobQueue(sort_key=_job_sort_key, descending=True)
             for jt in JOB_TYPES
         }
+        self._in_flight: dict[JobType, set[str]] = {jt: set() for jt in JOB_TYPES}
         self._job_available = asyncio.Event()
 
     async def add(self, job: BaseJob) -> bool:
+        if job.id in self._in_flight[job.job_type]:
+            return False
+
         result = await self._queues[job.job_type].add(job)
         if result:
             self._job_available.set()
@@ -144,6 +148,8 @@ class QueueManager:
 
         grouped: dict[JobType, list[BaseJob]] = {jt: [] for jt in JOB_TYPES}
         for job in jobs:
+            if job.id in self._in_flight[job.job_type]:
+                continue
             grouped[job.job_type].append(job)
 
         added = 0
@@ -158,7 +164,34 @@ class QueueManager:
         return added
 
     async def next(self, job_type: JobType, n: int = 1) -> list[BaseJob]:
-        return await self._queues[job_type].dequeue_n(n)
+        """Dequeue and claim up to n jobs for dispatch.
+
+        Claimed jobs are moved into an in-flight set and remain deduplicated
+        against add/add_all until release/release_all is called.
+        """
+        if n <= 0:
+            return []
+
+        claimed: list[BaseJob] = []
+        while len(claimed) < n:
+            candidates = await self._queues[job_type].dequeue_n(n - len(claimed))
+            if not candidates:
+                break
+
+            for job in candidates:
+                if job.id in self._in_flight[job_type]:
+                    continue
+                self._in_flight[job_type].add(job.id)
+                claimed.append(job)
+
+        return claimed
+
+    def release(self, job_type: JobType, job_id: str) -> None:
+        self._in_flight[job_type].discard(job_id)
+
+    def release_all(self, jobs: Sequence[BaseJob]) -> None:
+        for job in jobs:
+            self.release(job.job_type, job.id)
 
     async def has_pending(self, job_type: JobType) -> bool:
         return await self._queues[job_type].size() > 0

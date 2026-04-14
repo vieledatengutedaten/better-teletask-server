@@ -123,6 +123,7 @@ class Scheduler:
                 logger.error(
                     f"Queue returned invalid job class for {job_type}: {type(job).__name__}"
                 )
+                self.queue_manager.release(job_type, job.id)
                 continue
 
             typed_job = cast(Job, job)
@@ -136,6 +137,7 @@ class Scheduler:
             else:
                 typed_job.status = "FAILED"
                 logger.warning(f"Prepare rejected job {typed_job.id}; skipping dispatch")
+                self.queue_manager.release(job_type, typed_job.id)
         return prepared
 
     def _dispatch_batch(self, job_type: JobType, jobs: list[Job]) -> None:
@@ -178,6 +180,7 @@ class Scheduler:
                             f"Worker {worker_id} finished, although Job {job.id} did not complete or fail {job.status}"
                         )
                     _ = self._jobs_by_id.pop(job.id, None)
+                self.queue_manager.release_all(jobs)
                 logger.info(f"Worker {worker_id} finished ({len(jobs)} job(s) on {resource})")
                 self._wake.set()
                 fire_broadcast()

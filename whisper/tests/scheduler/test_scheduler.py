@@ -269,6 +269,28 @@ class TestBatching:
         assert len(fake_worker.transcribe_calls) == 0
         assert scheduler.capacity_for("whisper") == 1
 
+    @pytest.mark.asyncio
+    async def test_prepare_rejection_releases_claim_for_reenqueue(
+        self,
+        scheduler: Scheduler,
+        queue_manager: QueueManager,
+        monkeypatch: pytest.MonkeyPatch,
+        override_batch_size,
+        override_resources,
+    ) -> None:
+        override_resources(whisper=1)
+        override_batch_size(transcription=1)
+
+        await queue_manager.add(make_transcription(55))
+
+        handler = get_job_handler("transcription")
+        monkeypatch.setattr(handler, "prepare", lambda _job: False)
+
+        dispatched = await scheduler._dispatch_available()
+
+        assert dispatched == 0
+        assert await queue_manager.add(make_transcription(55)) is True
+
 
 class TestPriority:
     @pytest.mark.asyncio
@@ -467,6 +489,21 @@ class TestJobIndex:
         assert finished_jobs[0].id == job.id
         assert scheduler.get_job(job.id) is None
         assert scheduler.active_jobs == []
+
+    @pytest.mark.asyncio
+    async def test_worker_finished_releases_claim_for_reenqueue(
+        self, scheduler: Scheduler, queue_manager: QueueManager
+    ) -> None:
+        await queue_manager.add(make_transcription(88))
+        await scheduler._dispatch_available()
+
+        # While active, duplicate admission is blocked by in-flight dedupe.
+        assert await queue_manager.add(make_transcription(88)) is False
+
+        worker_id = next(iter(scheduler._active["whisper"].keys()))
+        scheduler.worker_finished(worker_id)
+
+        assert await queue_manager.add(make_transcription(88)) is True
 
     @pytest.mark.asyncio
     async def test_worker_finished_for_job_removes_owning_worker_batch(

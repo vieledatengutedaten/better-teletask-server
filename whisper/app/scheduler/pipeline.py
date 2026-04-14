@@ -156,6 +156,7 @@ class PipelineCoordinator:
         for step in PIPELINE:
             if step.is_done(teletask_id):
                 continue
+
             jobs = step.factory(teletask_id, priority)
             if jobs:
                 _ = await self.queue_manager.add_all(jobs)

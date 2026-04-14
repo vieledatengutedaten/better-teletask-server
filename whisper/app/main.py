@@ -6,7 +6,7 @@ from fastapi import FastAPI
 # setup logging — must be imported before other modules to configure handlers
 from lib.core.logger import logger
 from app.db.migrations import initDatabase
-from app.discovery import get_teletask_ids
+from app.utils.discovery import get_teletask_ids
 from app.scheduler.pipeline import PipelineCoordinator, set_coordinator
 from app.scheduler.queues import queue_manager
 from app.scheduler.scheduler import Scheduler, set_scheduler
