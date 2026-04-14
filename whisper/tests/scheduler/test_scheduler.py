@@ -15,8 +15,7 @@ from lib.models.jobs import (
     TranslationParams,
 )
 from app.scheduler.queues import QueueManager
-from app.scheduler.registry import JOB_TYPES, RESOURCES, JobTypeSpec, ResourceSpec
-from app.scheduler.job_handlers import get_job_handler
+from app.scheduler.registry import JOB_TYPES, RESOURCES, JobTypeSpec, ResourceSpec, spec_for
 from app.scheduler.scheduler import Scheduler
 from app.worker.worker_manager import WorkerManager
 from app.worker.worker import Worker
@@ -123,6 +122,11 @@ def override_batch_size(monkeypatch: pytest.MonkeyPatch):
                     handler=current.handler,
                     batch_size=batch_size,
                     base_priority=current.base_priority,
+                    stage_name=current.stage_name,
+                    stage_order=current.stage_order,
+                    factory=current.factory,
+                    is_done=current.is_done,
+                    done_ids=current.done_ids,
                 ),
             )
 
@@ -228,7 +232,7 @@ class TestBatching:
         for teletask_id in [1, 2, 3, 4, 5]:
             await queue_manager.add(make_transcription(teletask_id))
 
-        handler = get_job_handler("transcription")
+        handler = spec_for("transcription").handler
         monkeypatch.setattr(
             handler,
             "prepare",
@@ -260,7 +264,7 @@ class TestBatching:
         await queue_manager.add(make_transcription(1))
         await queue_manager.add(make_transcription(2))
 
-        handler = get_job_handler("transcription")
+        handler = spec_for("transcription").handler
         monkeypatch.setattr(handler, "prepare", lambda job: False)
 
         dispatched = await scheduler._dispatch_available()
@@ -283,7 +287,7 @@ class TestBatching:
 
         await queue_manager.add(make_transcription(55))
 
-        handler = get_job_handler("transcription")
+        handler = spec_for("transcription").handler
         monkeypatch.setattr(handler, "prepare", lambda _job: False)
 
         dispatched = await scheduler._dispatch_available()

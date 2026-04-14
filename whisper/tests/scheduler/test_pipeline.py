@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 import app.scheduler.pipeline as pipeline_module
-from app.scheduler.pipeline import PipelineCoordinator, PipelineStep
+from app.scheduler.pipeline import PipelineCoordinator
 from lib.models.jobs import TranscriptionJob, TranscriptionParams
 
 
@@ -19,6 +19,22 @@ def _transcription_job(teletask_id: int, priority: int = 0) -> TranscriptionJob:
     )
 
 
+def _step(
+    name: str,
+    job_type: str,
+    factory,
+    is_done,
+    done_ids,
+):
+    return SimpleNamespace(
+        stage_name=name,
+        job_type=job_type,
+        factory=factory,
+        is_done=is_done,
+        done_ids=done_ids,
+    )
+
+
 @pytest.mark.asyncio
 async def test_advance_enqueues_first_undone_step(
     monkeypatch: pytest.MonkeyPatch,
@@ -26,7 +42,7 @@ async def test_advance_enqueues_first_undone_step(
     queue_manager = SimpleNamespace(add_all=AsyncMock(return_value=1))
     coordinator = PipelineCoordinator(queue_manager=queue_manager)
 
-    step_done = PipelineStep(
+    step_done = _step(
         name="scrape",
         job_type="scrape_lecture_data",
         factory=lambda tid, priority: [],
@@ -34,14 +50,14 @@ async def test_advance_enqueues_first_undone_step(
         done_ids=lambda: set(),
     )
 
-    step = PipelineStep(
+    step = _step(
         name="transcribe",
         job_type="transcription",
         factory=lambda tid, priority: [_transcription_job(tid, priority)],
         is_done=lambda _tid: False,
         done_ids=lambda: set(),
     )
-    monkeypatch.setattr(pipeline_module, "PIPELINE", [step_done, step])
+    monkeypatch.setattr(pipeline_module, "ordered_pipeline_specs", lambda: [step_done, step])
 
     result = await coordinator.advance(42, priority=1)
 
@@ -59,14 +75,14 @@ async def test_advance_returns_none_when_all_steps_done(
     queue_manager = SimpleNamespace(add_all=AsyncMock(return_value=1))
     coordinator = PipelineCoordinator(queue_manager=queue_manager)
 
-    step = PipelineStep(
+    step = _step(
         name="transcribe",
         job_type="transcription",
         factory=lambda tid, priority: [_transcription_job(tid, priority)],
         is_done=lambda _tid: True,
         done_ids=lambda: set(),
     )
-    monkeypatch.setattr(pipeline_module, "PIPELINE", [step])
+    monkeypatch.setattr(pipeline_module, "ordered_pipeline_specs", lambda: [step])
 
     result = await coordinator.advance(42, priority=1)
 
@@ -81,14 +97,14 @@ async def test_advance_with_no_jobs_does_not_enqueue(
     queue_manager = SimpleNamespace(add_all=AsyncMock(return_value=1))
     coordinator = PipelineCoordinator(queue_manager=queue_manager)
 
-    step = PipelineStep(
+    step = _step(
         name="transcribe",
         job_type="transcription",
         factory=lambda tid, priority: [],
         is_done=lambda _tid: False,
         done_ids=lambda: set(),
     )
-    monkeypatch.setattr(pipeline_module, "PIPELINE", [step])
+    monkeypatch.setattr(pipeline_module, "ordered_pipeline_specs", lambda: [step])
 
     result = await coordinator.advance(42, priority=1)
 

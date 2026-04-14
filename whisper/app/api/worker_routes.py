@@ -9,8 +9,8 @@ from lib.models.jobs import (
     LogLevel,
     SchedulerStatuses,
 )
-from app.scheduler.job_handlers import get_job_handler
 from app.scheduler.pipeline import get_coordinator
+from app.scheduler.registry import spec_for
 from app.scheduler.scheduler import Scheduler, get_scheduler
 
 
@@ -49,7 +49,7 @@ async def _submit_result_common(
     job: Job,
     result: JobResult,
 ) -> dict[str, str | None]:
-    handler = get_job_handler(job.job_type)
+    handler = spec_for(job.job_type).handler
     await handler.handle_result(job, result)
 
     job.status = "COMPLETED"
@@ -74,7 +74,7 @@ async def _report_failure_common(
     worker_id: str,
 ) -> dict[str, str]:
     job.status = "FAILED"  # TODO what to do with failed jobs
-    handler = get_job_handler(job.job_type)
+    handler = spec_for(job.job_type).handler
     await handler.handle_failed(job, reason)
     _ = scheduler.worker_finished(worker_id)
     return {"message": f"Failure recorded for job {job.id}"}

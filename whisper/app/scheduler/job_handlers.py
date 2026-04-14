@@ -6,7 +6,6 @@ from lib.core.logger import logger
 from lib.models.jobs import (
     Job,
     JobResult,
-    JobType,
     ScrapeLectureDataResult,
     TranscriptionResult,
     TranslationResult,
@@ -107,14 +106,3 @@ class ScrapeLectureDataJobHandler(JobHandler):
         # TODO scrape failure leaves the pipeline dead for this teletask_id;
         # revisit once blacklist/retry policy is decided.
         logger.error(f"[mock] scrape_lecture_data job {job.id} failed: {reason}")
-
-
-_JOB_HANDLERS: dict[JobType, JobHandler] = {
-    "scrape_lecture_data": ScrapeLectureDataJobHandler(),
-    "transcription": TranscriptionJobHandler(),
-    "translation": TranslationJobHandler(),
-}
-
-
-def get_job_handler(job_type: JobType) -> JobHandler:
-    return _JOB_HANDLERS[job_type]
