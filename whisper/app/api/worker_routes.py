@@ -48,22 +48,22 @@ def _require_worker_owns_job(scheduler: Scheduler, worker_id: str, job_id: str) 
 async def _submit_result_common(
     job: Job,
     result: JobResult,
-) -> dict[str, str | None]:
+) -> dict[str, str | list[str]]:
     handler = spec_for(job.job_type).handler
     await handler.handle_result(job, result)
 
     job.status = "COMPLETED"
 
     try:
-        next_step = await get_coordinator().advance(
+        next_steps = await get_coordinator().advance(
             job.params.teletask_id, priority=job.priority
         )
     except RuntimeError:
-        next_step = None
+        next_steps = []
 
     return {
         "message": f"Result accepted for job {job.id}",
-        "next_step": next_step,
+        "next_steps": next_steps,
     }
 
 

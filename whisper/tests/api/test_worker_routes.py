@@ -80,6 +80,7 @@ class TestWorkerRoutesV2:
             json={"job_id": job.id, "success": True, "job_type": "transcription"},
         )
         assert response.status_code == 200
+        assert response.json()["next_steps"] == []
         assert scheduler.worker_finished_calls == []
 
     def test_finished_v2_closes_worker(

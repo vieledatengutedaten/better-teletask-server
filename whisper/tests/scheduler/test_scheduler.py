@@ -127,6 +127,7 @@ def override_batch_size(monkeypatch: pytest.MonkeyPatch):
                     factory=current.factory,
                     is_done=current.is_done,
                     done_ids=current.done_ids,
+                    depends_on=current.depends_on,
                 ),
             )
 

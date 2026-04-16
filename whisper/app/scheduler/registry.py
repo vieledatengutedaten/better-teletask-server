@@ -4,17 +4,17 @@ Adding a new jobtype = four edits:
   1. Define Job/Params/Result classes in lib/models/dataclasses.py
   2. Write a JobHandler subclass in app/scheduler/job_handlers.py
     3. Define factory/is_done/done_ids callbacks in app/scheduler/pipeline_specs.py
-    4. Add a JobTypeSpec entry to JOB_TYPES below
+    4. Add a JobTypeSpec entry to JOB_TYPES below, including depends_on
 
 Adding a new resource = one edit:
   1. Add to ResourceType literal in dataclasses.py and to RESOURCES below
 
 The scheduler, queues, and worker manager read everything from this registry.
-The pipeline coordinator also reads workflow order and completion callbacks here.
+The pipeline coordinator also reads dependency rules and completion callbacks here.
 """
 
 import os
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
 from lib.models.jobs import (
@@ -62,6 +62,7 @@ class JobTypeSpec:
     factory: Callable[[int, int], list[BaseJob]]
     is_done: Callable[[int], bool]
     done_ids: Callable[[], set[int]]
+    depends_on: tuple[JobType, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -84,6 +85,7 @@ JOB_TYPES: dict[JobType, JobTypeSpec] = {
         factory=scrape_factory,
         is_done=scrape_is_done,
         done_ids=scrape_done_ids,
+        depends_on=(),
     ),
     "transcription": JobTypeSpec(
         job_type="transcription",
@@ -98,6 +100,7 @@ JOB_TYPES: dict[JobType, JobTypeSpec] = {
         factory=transcribe_factory,
         is_done=transcribe_is_done,
         done_ids=transcribe_done_ids,
+        depends_on=("scrape_lecture_data",),
     ),
     "translation": JobTypeSpec(
         job_type="translation",
@@ -112,8 +115,39 @@ JOB_TYPES: dict[JobType, JobTypeSpec] = {
         factory=translate_factory,
         is_done=translate_is_done,
         done_ids=translate_done_ids,
+        depends_on=("transcription",),
     ),
 }
+
+
+def  validate_job_graph(job_types: Mapping[JobType, JobTypeSpec]) -> None:
+    for job_type, spec in job_types.items():
+        for dep in spec.depends_on:
+            if dep not in job_types:
+                raise ValueError(f"Unknown dependency '{dep}' for job type '{job_type}'")
+            if dep == job_type:
+                raise ValueError(f"Self dependency declared for job type '{job_type}'")
+
+    visiting: set[JobType] = set()
+    visited: set[JobType] = set()
+
+    def _visit(node: JobType) -> None:
+        if node in visited:
+            return
+        if node in visiting:
+            raise ValueError(f"Cyclic job dependency detected at '{node}'")
+
+        visiting.add(node)
+        for dep in job_types[node].depends_on:
+            _visit(dep)
+        visiting.remove(node)
+        visited.add(node)
+
+    for job_type in job_types:
+        _visit(job_type)
+
+
+validate_job_graph(JOB_TYPES)
 
 
 _DEFAULT_MAX_WORKERS: dict[ResourceType, int] = {

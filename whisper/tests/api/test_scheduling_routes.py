@@ -123,12 +123,13 @@ class TestPrioritize:
         self, _mock_ping, mock_queue_manager, mock_get_coordinator, client
     ):
         mock_queue_manager.remove_by_teletask_id = AsyncMock(return_value=[])
-        coordinator = SimpleNamespace(advance=AsyncMock(return_value="scrape"))
+        coordinator = SimpleNamespace(advance=AsyncMock(return_value=["scrape"]))
         mock_get_coordinator.return_value = coordinator
 
         response = client.post("/prioritize/11401")
         assert response.status_code == 200
         assert "prioritized" in response.json()["message"]
+        assert response.json()["next_steps"] == ["scrape"]
         coordinator.advance.assert_awaited_once_with(11401, priority=1)
 
     @patch("app.api.scheduling_routes.get_coordinator")
@@ -139,7 +140,7 @@ class TestPrioritize:
     ):
         mock_queue_manager.remove_by_teletask_id = AsyncMock(return_value=[])
         mock_get_coordinator.return_value = SimpleNamespace(
-            advance=AsyncMock(return_value=None)
+            advance=AsyncMock(return_value=[])
         )
 
         response = client.post("/prioritize/11401")

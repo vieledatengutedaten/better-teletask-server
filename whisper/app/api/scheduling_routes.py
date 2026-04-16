@@ -66,10 +66,14 @@ async def prioritize_id(teletask_id: int):
                 logger.info(f"ID {teletask_id} is currently being processed.")
                 return {"message": f"ID {teletask_id} is currently being processed."}
 
-    next_step = await get_coordinator().advance(teletask_id, priority=1)
-    if next_step is None:
+    next_steps = await get_coordinator().advance(teletask_id, priority=1)
+    if not next_steps:
         logger.info(f"ID {teletask_id} pipeline already complete.")
         return {"message": f"ID {teletask_id} pipeline already complete."}
 
-    logger.info(f"ID {teletask_id} prioritized at pipeline step {next_step}.")
-    return {"message": f"ID {teletask_id} prioritized at step {next_step}."}
+    steps = ", ".join(next_steps)
+    logger.info(f"ID {teletask_id} prioritized at pipeline steps {steps}.")
+    return {
+        "message": f"ID {teletask_id} prioritized at steps {steps}.",
+        "next_steps": next_steps,
+    }
