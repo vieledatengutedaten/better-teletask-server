@@ -12,11 +12,13 @@ _scheduler: "Scheduler | None" = None
 
 
 def set_scheduler(scheduler: "Scheduler") -> None:
+    """Set the global scheduler instance."""
     global _scheduler
     _scheduler = scheduler
 
 
 def get_scheduler() -> "Scheduler":
+    """Return the global scheduler instance."""
     if _scheduler is None:
         raise RuntimeError("Scheduler not initialized")
     return _scheduler
@@ -41,6 +43,7 @@ class Scheduler:
         queue_manager: QueueManager,
         worker_manager: WorkerManager | None = None,
     ) -> None:
+        """Create a scheduler with queue and worker managers."""
         self.queue_manager: QueueManager = queue_manager
         self.worker_manager: WorkerManager = worker_manager or WorkerManager()
         self._active: dict[ResourceType, dict[str, list[Job]]] = {
@@ -51,16 +54,20 @@ class Scheduler:
         self._worker_counter: int = 0
 
     def capacity_for(self, resource: ResourceType) -> int:
+        """Return free capacity for the given resource."""
         return RESOURCES[resource].max_workers - len(self._active[resource])
 
     @property
     def active_jobs(self) -> list[Job]:
+        """Return a list of currently tracked active jobs."""
         return list(self._jobs_by_id.values())
 
     def get_job(self, job_id: str) -> Job | None:
+        """Return a job by ID if it is tracked."""
         return self._jobs_by_id.get(job_id)
 
     def get_worker_id_for_job(self, job_id: str) -> str | None:
+        """Find the worker ID that owns the given job ID."""
         for resource_workers in self._active.values():
             for worker_id, jobs in resource_workers.items():
                 if any(j.id == job_id for j in jobs):
@@ -68,6 +75,7 @@ class Scheduler:
         return None
 
     def active_teletask_ids(self, job_type: JobType) -> set[int]:
+        """Collect active teletask IDs for a specific job type."""
         resource = spec_for(job_type).resource
         return {
             cast(int, getattr(j.params, "teletask_id", 0))
@@ -77,6 +85,7 @@ class Scheduler:
         }
 
     def snapshot(self) -> dict[str, object]:
+        """Return a snapshot of resources and active jobs."""
         return {
             "resources": {
                 r: {
@@ -142,6 +151,7 @@ class Scheduler:
         return prepared
 
     def _dispatch_batch(self, job_type: JobType, jobs: list[Job]) -> None:
+        """Create a worker for the batch and dispatch jobs."""
         spec = spec_for(job_type)
         self._worker_counter += 1
         worker_id = f"worker-{self._worker_counter}"
@@ -172,6 +182,7 @@ class Scheduler:
         return dispatched
 
     def worker_finished(self, worker_id: str) -> list[Job] | None:
+        """Finalize a worker and release its jobs."""
         for resource, workers in self._active.items():
             if worker_id in workers:
                 jobs = workers.pop(worker_id)
@@ -195,6 +206,7 @@ class Scheduler:
         return None
 
     def worker_finished_for_job(self, job_id: str) -> list[Job] | None:
+        """Finalize the worker that owns the given job ID."""
         worker_id = self.get_worker_id_for_job(job_id)
         if worker_id is not None:
             return self.worker_finished(worker_id)
@@ -203,6 +215,7 @@ class Scheduler:
         return None
 
     async def run(self) -> None:
+        """Run the scheduler loop and dispatch workers as needed."""
         limits = ", ".join(f"{r}={spec.max_workers}" for r, spec in RESOURCES.items())
         logger.info(f"Scheduler started; resource limits: {limits}")
         await asyncio.sleep(1)  # let server startup logs finish first

@@ -5,9 +5,9 @@ from typing import override
 from app.worker.worker import Worker
 from lib.models.jobs import (
     JobType,
-    ScrapeLectureDataJob,
     ScrapeLectureDataParams,
     JobParamsBase,
+    JobPayload,
     TranscriptionParams,
     TranslationParams,
 )
@@ -23,23 +23,34 @@ class LocalWorker(Worker):
         self,
         worker_id: str,
         job_type: JobType,
-        params: Sequence[JobParamsBase],
+        payloads: Sequence[JobPayload[JobParamsBase]],
     ) -> None:
         match job_type:
             case "scrape_lecture_data":
                 scrape_params = require_params(
-                    params, ScrapeLectureDataParams, job_type
+                    [payload.params for payload in payloads],
+                    ScrapeLectureDataParams,
+                    job_type,
                 )
-                scrape_jobs = [ScrapeLectureDataJob(params=p) for p in scrape_params]
-                _ = await asyncio.to_thread(run_scrape, scrape_jobs, worker_id)
+                scrape_payloads = [
+                    JobPayload(job_id=payload.job_id, params=params)
+                    for payload, params in zip(payloads, scrape_params, strict=True)
+                ]
+                _ = await asyncio.to_thread(run_scrape, scrape_payloads, worker_id)
             case "transcription":
                 transcription_params = require_params(
-                    params, TranscriptionParams, job_type
+                    [payload.params for payload in payloads],
+                    TranscriptionParams,
+                    job_type,
                 )
-                for item in transcription_params:
-                    await asyncio.to_thread(run_transcription, item)
+                for params in transcription_params:
+                    await asyncio.to_thread(run_transcription, params)
             case "translation":
-                _ = require_params(params, TranslationParams, job_type)
+                _ = require_params(
+                    [payload.params for payload in payloads],
+                    TranslationParams,
+                    job_type,
+                )
                 raise NotImplementedError(
                     "LocalWorker does not implement 'translation' execution yet"
                 )

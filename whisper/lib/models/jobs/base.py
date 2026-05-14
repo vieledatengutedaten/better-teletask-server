@@ -1,5 +1,5 @@
 from datetime import datetime as dt_datetime
-from typing import Literal, TypeAlias
+from typing import Generic, Literal, TypeAlias, TypeVar
 
 from pydantic import BaseModel, Field
 
@@ -26,6 +26,20 @@ ResourceType: TypeAlias = Literal["whisper", "ollama", "cpu"]
 
 class JobParamsBase(BaseModel):
     pass
+
+
+JobParamsT = TypeVar("JobParamsT", bound=JobParamsBase)
+
+
+class JobPayload(BaseModel, Generic[JobParamsT]):
+    job_id: str
+    params: JobParamsT
+
+
+class BatchPayload(BaseModel, Generic[JobParamsT]):
+    worker_id: str
+    job_type: JobType
+    jobs: list[JobPayload[JobParamsT]]
 
 
 class JobResultBase(BaseModel):

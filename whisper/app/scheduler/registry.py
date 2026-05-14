@@ -78,7 +78,7 @@ JOB_TYPES: dict[JobType, JobTypeSpec] = {
     "scrape_lecture_data": JobTypeSpec(
         job_type="scrape_lecture_data",
         resource="cpu",
-        worker_factory=LocalWorker,
+        worker_factory=SlurmWorker,
         job_cls=ScrapeLectureDataJob,
         result_cls=ScrapeLectureDataResult,
         handler=ScrapeLectureDataJobHandler(),

@@ -2,13 +2,13 @@ from collections.abc import Sequence
 from typing import override
 
 from pydantic import BaseModel
-from pytest import param
 
 
 from app.worker.worker import Worker
 from lib.models.jobs import (
     JobType,
     JobParamsBase,
+    JobPayload,
     ScrapeLectureDataParams,
     TranscriptionParams,
     TranslationParams,
@@ -16,17 +16,23 @@ from lib.models.jobs import (
 from app.worker.utils import require_params
 
 
-class JobPayload(BaseModel):
+class DumpJobPayload(BaseModel):
     worker_id: str
     job_type: JobType
-    params: Sequence[dict]
+    jobs: Sequence[dict]
 
 
 def build_json(
-    worker_id: str, job_type: JobType, params: Sequence[JobParamsBase]
+    worker_id: str,
+    job_type: JobType,
+    payloads: Sequence[JobPayload[JobParamsBase]],
 ) -> str:
-    return JobPayload(
-        worker_id=worker_id, job_type=job_type, params=[p.model_dump() for p in params]
+    return DumpJobPayload(
+        worker_id=worker_id,
+        job_type=job_type,
+        jobs=[
+            {"job_id": p.job_id, "params": p.params.model_dump()} for p in payloads
+        ],
     ).model_dump_json()
 
 
@@ -37,20 +43,32 @@ class SlurmWorker(Worker):
         self,
         worker_id: str,
         job_type: JobType,
-        params: Sequence[JobParamsBase],
+        payloads: Sequence[JobPayload[JobParamsBase]],
     ) -> None:
         match job_type:
             case "scrape_lecture_data":
-                params = require_params(params, ScrapeLectureDataParams, job_type)
-                print(build_json(worker_id, job_type, params))
+                _ = require_params(
+                    [payload.params for payload in payloads],
+                    ScrapeLectureDataParams,
+                    job_type,
+                )
+                print(build_json(worker_id, job_type, payloads))
                 # raise NotImplementedError("SlurmWorker does not implement 'scrape_lecture_data' execution yet")
             case "transcription":
-                _ = require_params(params, TranscriptionParams, job_type)
+                _ = require_params(
+                    [payload.params for payload in payloads],
+                    TranscriptionParams,
+                    job_type,
+                )
                 raise NotImplementedError(
                     "SlurmWorker does not implement 'transcription' execution yet"
                 )
             case "translation":
-                _ = require_params(params, TranslationParams, job_type)
+                _ = require_params(
+                    [payload.params for payload in payloads],
+                    TranslationParams,
+                    job_type,
+                )
                 raise NotImplementedError(
                     "SlurmWorker does not implement 'translation' execution yet"
                 )

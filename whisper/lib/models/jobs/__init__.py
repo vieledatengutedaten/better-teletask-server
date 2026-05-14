@@ -4,6 +4,8 @@ from pydantic import Field
 
 from lib.models.jobs.base import (
     BaseJob,
+    BatchPayload,
+    JobPayload,
     JobParamsBase,
     JobResultBase,
     JobType,
@@ -40,6 +42,8 @@ JobResult: TypeAlias = Annotated[
 
 __all__ = [
     "BaseJob",
+    "BatchPayload",
+    "JobPayload",
     "JobParamsBase",
     "Job",
     "JobResult",

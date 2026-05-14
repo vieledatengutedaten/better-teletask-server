@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from app.worker.worker import MockWorker, Worker
 from app.scheduler.registry import JOB_TYPES
 from lib.core.logger import logger
-from lib.models.jobs import BaseJob, JobParamsBase, JobType
+from lib.models.jobs import BaseJob, JobParamsBase, JobPayload, JobType
 
 
 class WorkerManager:
@@ -22,9 +22,11 @@ class WorkerManager:
     def dispatch(
         self, worker_id: str, job_type: JobType, jobs: Sequence[BaseJob]
     ) -> None:
-        params: list[JobParamsBase] = [job.params for job in jobs]
+        payloads: list[JobPayload[JobParamsBase]] = [
+            JobPayload(job_id=job.id, params=job.params) for job in jobs
+        ]
         task = asyncio.create_task(
-            self.workers[job_type].run(worker_id, job_type, params)
+            self.workers[job_type].run(worker_id, job_type, payloads)
         )
         task.add_done_callback(self._log_task_result)
 
