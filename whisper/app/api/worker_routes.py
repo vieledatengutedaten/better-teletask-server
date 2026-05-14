@@ -1,3 +1,4 @@
+import asyncio
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -12,24 +13,13 @@ from lib.models.jobs import (
 from app.scheduler.pipeline import get_coordinator
 from app.scheduler.registry import spec_for
 from app.scheduler.scheduler import Scheduler, get_scheduler
+from lib.models.messages import StatusUpdate, LogMessage, FailureReport
 
 
 worker_router = APIRouter()
 
 SchedulerDep = Annotated[Scheduler, Depends(get_scheduler)]
 
-
-class StatusUpdate(BaseModel):
-    status: SchedulerStatuses
-
-
-class LogMessage(BaseModel):
-    message: str
-    level: LogLevel = "info"
-
-
-class FailureReport(BaseModel):
-    reason: str
 
 
 def _require_worker_owns_job(scheduler: Scheduler, worker_id: str, job_id: str) -> Job:
@@ -140,6 +130,11 @@ async def report_failure_v2(
     scheduler: SchedulerDep,
 ):
     job = _require_worker_owns_job(scheduler, worker_id, job_id)
+
+
+    #logger.info("waiting for 10 sec FAILED")
+    #await asyncio.sleep(10000)  # TESTING
+
     return await _report_failure_common(
         scheduler=scheduler,
         job=job,
@@ -150,6 +145,10 @@ async def report_failure_v2(
 
 @worker_router.post("/{worker_id}/finished")
 async def report_worker_finished(worker_id: str, scheduler: SchedulerDep):
+    
+    #logger.info("waiting for 10 sec FINISHED")
+    #await asyncio.sleep(10000)  # TESTING
+
     jobs = scheduler.worker_finished(worker_id)
     if jobs is None:
         return {"message": f"Worker {worker_id} already finished or unknown"}

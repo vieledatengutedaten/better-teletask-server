@@ -10,8 +10,6 @@ from pathlib import Path
 from sqlalchemy.sql import elements
 
 from lib.core.config import USERNAME_COOKIE, BASE_URL
-from app.db.vtt_files import getHighestTeletaskID
-
 from lib.core.logger import logger
 
 CHAIN_PEM = Path(__file__).parent / "chain.pem"
@@ -155,30 +153,6 @@ def pingVideoByID(id) -> str:
         return str(response.status_code)
 
 
-def get_upper_ids() -> list[int]:
-    ids: list[int] = []
-    unreachable_ids: list[int] = []
-    highest: int | None = getHighestTeletaskID()
-    if highest is None:
-        return ids
-    highest = highest + 1
-    for i in range(1, 10):
-        res = pingVideoByID(str(highest + i))
-        if res == "200":
-            ids.append(highest + i)
-        if res == "401":
-            logger.error(
-                "Received 401 Unauthorized. Check your USERNAME_COOKIE environment variable.",
-                extra={"id": highest + i},
-            )
-        if res == "403" or res == "404":
-            logger.warning(
-                f"Received {res} for ID {highest + i}.", extra={"id": highest + i}
-            )
-            unreachable_ids.append(highest+i)
-    return ids
-
-
 def scrape_mp4_url_from_teletaskid(id, response=None) -> str:
     """Scrape the mp4 URL for a teletask ID. Pure scraping, no DB access."""
     if response is None:
@@ -252,5 +226,6 @@ def scrape_lecture_data(
         "series_id": series_id,
         "series_name": series_name,
     }
+    logger.info("Scraped lecture data successfully.", extra={"id": id})
     logger.debug(f"Fetched lecture data: {lecture_data}", extra={"id": id})
     return lecture_data

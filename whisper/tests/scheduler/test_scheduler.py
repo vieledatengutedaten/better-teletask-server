@@ -7,8 +7,8 @@ import asyncio
 import pytest
 
 from lib.models.jobs import (
-    BaseJob,
     JobType,
+    JobParamsBase,
     TranscriptionJob,
     TranscriptionParams,
     TranslationJob,
@@ -46,21 +46,26 @@ class FakeWorker(Worker):
     """Records dispatched batches for assertions."""
 
     def __init__(self) -> None:
-        self.calls_by_jobtype: dict[JobType, list[list[BaseJob]]] = {}
-        self.dispatch_order: list[list[BaseJob]] = []
+        self.calls_by_jobtype: dict[JobType, list[list[JobParamsBase]]] = {}
+        self.dispatch_order: list[tuple[JobType, list[JobParamsBase]]] = []
         self.worker_ids: list[str] = []
 
-    def run(self, worker_id: str, job_type: JobType, jobs: list[BaseJob]) -> None:
+    async def run(
+        self,
+        worker_id: str,
+        job_type: JobType,
+        jobs: list[JobParamsBase],
+    ) -> None:
         self.worker_ids.append(worker_id)
         self.calls_by_jobtype.setdefault(job_type, []).append(jobs)
-        self.dispatch_order.append(jobs)
+        self.dispatch_order.append((job_type, jobs))
 
     @property
-    def transcribe_calls(self) -> list[list[BaseJob]]:
+    def transcribe_calls(self) -> list[list[JobParamsBase]]:
         return self.calls_by_jobtype.get("transcription", [])
 
     @property
-    def translate_calls(self) -> list[list[BaseJob]]:
+    def translate_calls(self) -> list[list[JobParamsBase]]:
         return self.calls_by_jobtype.get("translation", [])
 
 
@@ -237,14 +242,14 @@ class TestBatching:
         monkeypatch.setattr(
             handler,
             "prepare",
-            lambda job: job.params.teletask_id != 3,
+            lambda job: job.teletask_id != 3,
         )
 
         dispatched = await scheduler._dispatch_available()
 
         assert dispatched == 1
         assert len(fake_worker.transcribe_calls) == 1
-        batch_ids = [job.params.teletask_id for job in fake_worker.transcribe_calls[0]]
+        batch_ids = [job.teletask_id for job in fake_worker.transcribe_calls[0]]
         assert len(batch_ids) == 3
         assert 3 not in batch_ids
         assert batch_ids == [5, 4, 2]
@@ -310,7 +315,7 @@ class TestPriority:
         await queue_manager.add(make_transcription(2))
         await scheduler._dispatch_available()
         # Transcription dispatched first
-        assert fake_worker.dispatch_order[0][0].job_type == "transcription"
+        assert fake_worker.dispatch_order[0][0] == "transcription"
 
     @pytest.mark.asyncio
     async def test_priority_field_orders_within_jobtype(
@@ -325,8 +330,8 @@ class TestPriority:
         await queue_manager.add(make_transcription(2, priority=1))
         await scheduler._dispatch_available()
         batch = fake_worker.transcribe_calls[0]
-        assert batch[0].params.teletask_id == 2
-        assert batch[1].params.teletask_id == 1
+        assert batch[0].teletask_id == 2
+        assert batch[1].teletask_id == 1
 
     @pytest.mark.asyncio
     async def test_full_priority_order(
@@ -351,8 +356,8 @@ class TestPriority:
         # Transcription has higher base_priority, drained until whisper full or queue empty.
         # Whisper has 2 capacity → both transcription jobs dispatch first (priority=1 then priority=0).
         # Then translation (only ollama left) → priority=1 then priority=0.
-        dispatched_jts = [batch[0].job_type for batch in fake_worker.dispatch_order]
-        dispatched_tids = [batch[0].params.teletask_id for batch in fake_worker.dispatch_order]
+        dispatched_jts = [job_type for job_type, _ in fake_worker.dispatch_order]
+        dispatched_tids = [batch[0].teletask_id for _, batch in fake_worker.dispatch_order]
         assert dispatched_jts[:2] == ["transcription", "transcription"]
         assert dispatched_tids[:2] == [1, 3]
         assert dispatched_jts[2:] == ["translation", "translation"]

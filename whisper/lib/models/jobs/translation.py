@@ -1,8 +1,6 @@
 from typing import Literal, TypeAlias, override
 
-from pydantic import BaseModel
-
-from lib.models.jobs.base import BaseJob, JobResultBase, JobType
+from lib.models.jobs.base import BaseJob, JobParamsBase, JobResultBase, JobType
 
 
 Language: TypeAlias = Literal["en", "de", "original"]
@@ -10,7 +8,7 @@ Language: TypeAlias = Literal["en", "de", "original"]
 TARGET_LANGUAGES: list[Language] = ["en", "de"]
 
 
-class TranslationParams(BaseModel):
+class TranslationParams(JobParamsBase):
     teletask_id: int
     from_language: str
     to_language: str

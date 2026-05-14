@@ -3,13 +3,19 @@ from fastapi.testclient import TestClient
 import pytest
 
 from app.api.worker_routes import worker_router
-from lib.models.jobs import TranscriptionJob, TranscriptionParams
+from lib.models.jobs import (
+    Job,
+    ScrapeLectureDataJob,
+    ScrapeLectureDataParams,
+    TranscriptionJob,
+    TranscriptionParams,
+)
 from app.scheduler.scheduler import get_scheduler
 
 
 class FakeScheduler:
-    def __init__(self, job: TranscriptionJob, worker_id: str = "worker-1") -> None:
-        self.job: TranscriptionJob = job
+    def __init__(self, job: Job, worker_id: str = "worker-1") -> None:
+        self.job: Job = job
         self.worker_id: str = worker_id
         self.active: bool = True
         self.worker_finished_calls: list[str] = []
@@ -46,6 +52,11 @@ def job() -> TranscriptionJob:
 @pytest.fixture
 def scheduler(job: TranscriptionJob) -> FakeScheduler:
     return FakeScheduler(job=job)
+
+
+@pytest.fixture
+def scrape_job() -> ScrapeLectureDataJob:
+    return ScrapeLectureDataJob(params=ScrapeLectureDataParams(teletask_id=12345))
 
 
 @pytest.fixture
@@ -97,3 +108,68 @@ class TestWorkerRoutesV2:
             json={"job_id": job.id, "success": True, "job_type": "transcription"},
         )
         assert response.status_code == 404
+
+    def test_scrape_result_v2_accepts_full_lecture_payload_flat(
+        self,
+        scrape_job: ScrapeLectureDataJob,
+    ):
+        scheduler = FakeScheduler(job=scrape_job)
+        app = FastAPI()
+        app.include_router(worker_router, prefix="/worker")
+        app.dependency_overrides[get_scheduler] = lambda: scheduler
+        client = TestClient(app)
+
+        response = client.post(
+            f"/worker/worker-1/jobs/{scrape_job.id}/result",
+            json={
+                "job_id": scrape_job.id,
+                "success": True,
+                "job_type": "scrape_lecture_data",
+                "lecture_id": 12345,
+                "lecturer_ids": [1, 2],
+                "lecturer_names": ["Ada Lovelace", "Grace Hopper"],
+                "date": "April 16, 2026",
+                "language": "English",
+                "duration": "00:42:00",
+                "lecture_title": "Compiler Construction",
+                "series_id": 99,
+                "series_name": "Foundations of Computer Science",
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.json()["next_steps"] == []
+        assert scrape_job.status == "COMPLETED"
+
+    def test_scrape_result_v2_rejects_nested_lecture_payload(
+        self,
+        scrape_job: ScrapeLectureDataJob,
+    ):
+        scheduler = FakeScheduler(job=scrape_job)
+        app = FastAPI()
+        app.include_router(worker_router, prefix="/worker")
+        app.dependency_overrides[get_scheduler] = lambda: scheduler
+        client = TestClient(app)
+
+        response = client.post(
+            f"/worker/worker-1/jobs/{scrape_job.id}/result",
+            json={
+                "job_id": scrape_job.id,
+                "success": True,
+                "job_type": "scrape_lecture_data",
+                "lecture_data": {
+                    "lecture_id": 12345,
+                    "lecturer_ids": [1, 2],
+                    "lecturer_names": ["Ada Lovelace", "Grace Hopper"],
+                    "date": "April 16, 2026",
+                    "language": "English",
+                    "duration": "00:42:00",
+                    "lecture_title": "Compiler Construction",
+                    "series_id": 99,
+                    "series_name": "Foundations of Computer Science",
+                },
+            },
+        )
+
+        assert response.status_code == 422
+        assert scrape_job.status == "ENQUEUED"

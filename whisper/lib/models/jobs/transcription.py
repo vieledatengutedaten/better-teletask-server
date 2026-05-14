@@ -1,12 +1,10 @@
 from typing import Literal, override
 
-from pydantic import BaseModel
-
-from lib.models.jobs.base import BaseJob, JobResultBase, JobType
+from lib.models.jobs.base import BaseJob, JobParamsBase, JobResultBase, JobType
 from ...core.config import ASR_MODEL, COMPUTE_TYPE
 
 
-class TranscriptionParams(BaseModel):
+class TranscriptionParams(JobParamsBase):
     teletask_id: int
     initial_prompt: str | None = None
     asr_model : str | None = ASR_MODEL

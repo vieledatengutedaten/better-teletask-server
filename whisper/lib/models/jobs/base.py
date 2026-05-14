@@ -25,6 +25,10 @@ JobType: TypeAlias = Literal["scrape_lecture_data", "transcription", "translatio
 ResourceType: TypeAlias = Literal["whisper", "ollama", "cpu"]
 
 
+class JobParamsBase(BaseModel):
+    pass
+
+
 class JobResultBase(BaseModel):
     job_id: str
     success: bool
@@ -33,7 +37,9 @@ class JobResultBase(BaseModel):
 
 class BaseJob(BaseModel):
     id: str = ""
+    worker_id: str | None = None
     job_type: JobType  # subclasses must set a default
+    params: JobParamsBase
     status: SchedulerStatuses = "ENQUEUED"
     priority: int = 0
     created_at: dt_datetime = Field(default_factory=dt_datetime.now)

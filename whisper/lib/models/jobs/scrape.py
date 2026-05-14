@@ -1,16 +1,25 @@
 from typing import Literal, override
 
-from pydantic import BaseModel
+from pydantic import Field
 
-from lib.models.jobs.base import BaseJob, JobResultBase, JobType
+from lib.models.jobs.base import BaseJob, JobParamsBase, JobResultBase, JobType
 
 
-class ScrapeLectureDataParams(BaseModel):
+class ScrapeLectureDataParams(JobParamsBase):
     teletask_id: int
 
 
 class ScrapeLectureDataResult(JobResultBase):
     job_type: Literal["scrape_lecture_data"] = "scrape_lecture_data"
+    lecture_id: int
+    lecturer_ids: list[int | None] = Field(default_factory=list)
+    lecturer_names: list[str] = Field(default_factory=list)
+    date: str | None = None
+    language: str | None = None
+    duration: str | None = None
+    lecture_title: str
+    series_id: int | None = None
+    series_name: str | None = None
 
 
 class ScrapeLectureDataJob(BaseJob):

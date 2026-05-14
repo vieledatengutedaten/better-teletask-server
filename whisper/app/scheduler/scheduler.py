@@ -145,6 +145,7 @@ class Scheduler:
         self._worker_counter += 1
         worker_id = f"worker-{self._worker_counter}"
         for job in jobs:
+            job.worker_id = worker_id
             job.status = "RUNNING"
             self._jobs_by_id[job.id] = job
         self._active[spec.resource][worker_id] = jobs
@@ -201,19 +202,31 @@ class Scheduler:
     async def run(self) -> None:
         limits = ", ".join(f"{r}={spec.max_workers}" for r, spec in RESOURCES.items())
         logger.info(f"Scheduler started; resource limits: {limits}")
-        while True:
+        await asyncio.sleep(1)  # let server startup logs finish first
+        while True:             
             dispatched = await self._dispatch_available()
             if dispatched > 0:
                 free = ", ".join(f"{r}={self.capacity_for(r)}" for r in RESOURCES)
                 logger.info(f"Dispatched {dispatched} worker(s); free capacity: {free}")
 
-            self._wake.clear()
-            _, pending = await asyncio.wait(
-                [
-                    asyncio.create_task(self.queue_manager.wait_for_job(timeout=120)),
-                    asyncio.create_task(self._wake.wait()),
-                ],
-                return_when=asyncio.FIRST_COMPLETED,
-            )
-            for task in pending:
-                _ = task.cancel()
+            tasks = [asyncio.create_task(self.queue_manager.wait_for_job(timeout=120)),
+                        asyncio.create_task(self._wake.wait()),]
+
+            try: 
+                self._wake.clear()
+                _, pending = await asyncio.wait(
+                    tasks,
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+                for task in pending:
+                    _ = task.cancel()
+            except asyncio.CancelledError:
+                for task in tasks:
+                    if not task.done():
+                        _ = task.cancel()
+                        try:
+                            await task
+                        except (asyncio.CancelledError, Exception):
+                            pass
+                raise
+                        

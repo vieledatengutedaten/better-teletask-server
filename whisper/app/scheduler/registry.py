@@ -17,6 +17,7 @@ import os
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
+from app.worker.worker import Worker
 from lib.models.jobs import (
     BaseJob,
     JobResultBase,
@@ -46,12 +47,14 @@ from app.scheduler.pipeline_specs import (
     translate_factory,
     translate_is_done,
 )
+from app.worker import SlurmWorker, LocalWorker
 
 
 @dataclass(frozen=True)
 class JobTypeSpec:
     job_type: JobType
     resource: ResourceType
+    worker_factory: Callable[[], Worker]
     job_cls: type[BaseJob]
     result_cls: type[JobResultBase]
     handler: JobHandler
@@ -75,6 +78,7 @@ JOB_TYPES: dict[JobType, JobTypeSpec] = {
     "scrape_lecture_data": JobTypeSpec(
         job_type="scrape_lecture_data",
         resource="cpu",
+        worker_factory=LocalWorker,
         job_cls=ScrapeLectureDataJob,
         result_cls=ScrapeLectureDataResult,
         handler=ScrapeLectureDataJobHandler(),
@@ -90,6 +94,7 @@ JOB_TYPES: dict[JobType, JobTypeSpec] = {
     "transcription": JobTypeSpec(
         job_type="transcription",
         resource="whisper",
+        worker_factory=LocalWorker,
         job_cls=TranscriptionJob,
         result_cls=TranscriptionResult,
         handler=TranscriptionJobHandler(),
@@ -105,6 +110,7 @@ JOB_TYPES: dict[JobType, JobTypeSpec] = {
     "translation": JobTypeSpec(
         job_type="translation",
         resource="ollama",
+        worker_factory=LocalWorker,
         job_cls=TranslationJob,
         result_cls=TranslationResult,
         handler=TranslationJobHandler(),
@@ -151,9 +157,9 @@ validate_job_graph(JOB_TYPES)
 
 
 _DEFAULT_MAX_WORKERS: dict[ResourceType, int] = {
-    "whisper": 2,
-    "ollama": 3,
-    "cpu": 8,
+    "whisper": 0,
+    "ollama": 0,
+    "cpu": 1,
 }
 
 
