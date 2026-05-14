@@ -96,11 +96,14 @@ class AsyncJobQueue:
 
     async def remove_by_teletask_id(self, teletask_id: int) -> list[BaseJob]:
         async with self._lock:
+
             def _job_teletask_id(job: BaseJob) -> int | None:
                 return cast(int | None, getattr(job.params, "teletask_id", None))
 
             removed = [j for j in self._queue if _job_teletask_id(j) == teletask_id]
-            self._queue = deque(j for j in self._queue if _job_teletask_id(j) != teletask_id)
+            self._queue = deque(
+                j for j in self._queue if _job_teletask_id(j) != teletask_id
+            )
             return removed
 
     async def get_all(self) -> list[BaseJob]:
@@ -198,10 +201,7 @@ class QueueManager:
 
     async def pending_teletask_ids(self, job_type: JobType) -> set[int]:
         all_jobs = await self._queues[job_type].get_all()
-        return {
-            cast(int, getattr(j.params, "teletask_id", 0))
-            for j in all_jobs
-        }
+        return {cast(int, getattr(j.params, "teletask_id", 0)) for j in all_jobs}
 
     async def remove_by_id(self, job_id: str) -> BaseJob | None:
         for queue in self._queues.values():
@@ -218,7 +218,9 @@ class QueueManager:
 
     async def get_all(self, job_type: JobType | None = None) -> list[BaseJob]:
         result: list[BaseJob] = []
-        targets: tuple[JobType, ...] = (job_type,) if job_type else tuple(self._queues.keys())
+        targets: tuple[JobType, ...] = (
+            (job_type,) if job_type else tuple(self._queues.keys())
+        )
         for jt in targets:
             result.extend(await self._queues[jt].get_all())
         return result

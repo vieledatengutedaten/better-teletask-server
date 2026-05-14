@@ -14,10 +14,14 @@ class WorkerManager:
         self.workers = (
             workers
             if workers is not None
-            else {job_type: spec.worker_factory() for job_type, spec in JOB_TYPES.items()}
+            else {
+                job_type: spec.worker_factory() for job_type, spec in JOB_TYPES.items()
+            }
         )
 
-    def dispatch(self, worker_id: str, job_type: JobType, jobs: Sequence[BaseJob]) -> None:
+    def dispatch(
+        self, worker_id: str, job_type: JobType, jobs: Sequence[BaseJob]
+    ) -> None:
         params: list[JobParamsBase] = [job.params for job in jobs]
         task = asyncio.create_task(
             self.workers[job_type].run(worker_id, job_type, params)

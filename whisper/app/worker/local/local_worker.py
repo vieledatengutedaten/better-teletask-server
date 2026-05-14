@@ -16,7 +16,6 @@ from worker.transcribe import run_transcription
 from app.worker.utils import require_params
 
 
-
 class LocalWorker(Worker):
 
     @override

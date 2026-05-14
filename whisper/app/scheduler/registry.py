@@ -58,8 +58,8 @@ class JobTypeSpec:
     job_cls: type[BaseJob]
     result_cls: type[JobResultBase]
     handler: JobHandler
-    batch_size: int       # how many jobs of this type per worker invocation
-    base_priority: int    # higher = scheduler picks this jobtype first
+    batch_size: int  # how many jobs of this type per worker invocation
+    base_priority: int  # higher = scheduler picks this jobtype first
     stage_name: str
     stage_order: int
     factory: Callable[[int, int], list[BaseJob]]
@@ -71,7 +71,7 @@ class JobTypeSpec:
 @dataclass(frozen=True)
 class ResourceSpec:
     resource: ResourceType
-    max_workers: int      # concurrent worker slots for this resource
+    max_workers: int  # concurrent worker slots for this resource
 
 
 JOB_TYPES: dict[JobType, JobTypeSpec] = {
@@ -126,11 +126,13 @@ JOB_TYPES: dict[JobType, JobTypeSpec] = {
 }
 
 
-def  validate_job_graph(job_types: Mapping[JobType, JobTypeSpec]) -> None:
+def validate_job_graph(job_types: Mapping[JobType, JobTypeSpec]) -> None:
     for job_type, spec in job_types.items():
         for dep in spec.depends_on:
             if dep not in job_types:
-                raise ValueError(f"Unknown dependency '{dep}' for job type '{job_type}'")
+                raise ValueError(
+                    f"Unknown dependency '{dep}' for job type '{job_type}'"
+                )
             if dep == job_type:
                 raise ValueError(f"Self dependency declared for job type '{job_type}'")
 

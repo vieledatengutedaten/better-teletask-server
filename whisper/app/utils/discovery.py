@@ -23,6 +23,7 @@ def get_teletask_ids() -> set[int]:
     biggest = max(candidates)
     return set(range(1, biggest + 1)) - set(blacklisted)
 
+
 def get_upper_ids() -> list[int]:
     ids: list[int] = []
     unreachable_ids: list[int] = []
@@ -43,5 +44,5 @@ def get_upper_ids() -> list[int]:
             logger.warning(
                 f"Received {res} for ID {highest + i}.", extra={"id": highest + i}
             )
-            unreachable_ids.append(highest+i)
+            unreachable_ids.append(highest + i)
     return ids

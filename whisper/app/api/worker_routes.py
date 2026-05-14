@@ -15,11 +15,9 @@ from app.scheduler.registry import spec_for
 from app.scheduler.scheduler import Scheduler, get_scheduler
 from lib.models.messages import StatusUpdate, LogMessage, FailureReport
 
-
 worker_router = APIRouter()
 
 SchedulerDep = Annotated[Scheduler, Depends(get_scheduler)]
-
 
 
 def _require_worker_owns_job(scheduler: Scheduler, worker_id: str, job_id: str) -> Job:
@@ -131,9 +129,8 @@ async def report_failure_v2(
 ):
     job = _require_worker_owns_job(scheduler, worker_id, job_id)
 
-
-    #logger.info("waiting for 10 sec FAILED")
-    #await asyncio.sleep(10000)  # TESTING
+    # logger.info("waiting for 10 sec FAILED")
+    # await asyncio.sleep(10000)  # TESTING
 
     return await _report_failure_common(
         scheduler=scheduler,
@@ -145,9 +142,9 @@ async def report_failure_v2(
 
 @worker_router.post("/{worker_id}/finished")
 async def report_worker_finished(worker_id: str, scheduler: SchedulerDep):
-    
-    #logger.info("waiting for 10 sec FINISHED")
-    #await asyncio.sleep(10000)  # TESTING
+
+    # logger.info("waiting for 10 sec FINISHED")
+    # await asyncio.sleep(10000)  # TESTING
 
     jobs = scheduler.worker_finished(worker_id)
     if jobs is None:

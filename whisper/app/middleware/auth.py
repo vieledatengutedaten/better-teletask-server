@@ -12,7 +12,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
 
-        if (ENVIRONMENT == "dev"):
+        if ENVIRONMENT == "dev":
             return await call_next(request)
 
         authorization = request.headers.get("authorization")

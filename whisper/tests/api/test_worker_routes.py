@@ -68,7 +68,9 @@ def client(scheduler: FakeScheduler):
 
 
 class TestWorkerRoutesV2:
-    def test_status_v2_updates_job_status(self, client: TestClient, job: TranscriptionJob):
+    def test_status_v2_updates_job_status(
+        self, client: TestClient, job: TranscriptionJob
+    ):
         response = client.post(
             f"/worker/worker-1/jobs/{job.id}/status",
             json={"status": "RUNNING"},
@@ -76,7 +78,9 @@ class TestWorkerRoutesV2:
         assert response.status_code == 200
         assert job.status == "RUNNING"
 
-    def test_status_v2_rejects_wrong_owner(self, client: TestClient, job: TranscriptionJob):
+    def test_status_v2_rejects_wrong_owner(
+        self, client: TestClient, job: TranscriptionJob
+    ):
         response = client.post(
             f"/worker/worker-2/jobs/{job.id}/status",
             json={"status": "RUNNING"},
@@ -101,8 +105,9 @@ class TestWorkerRoutesV2:
         assert response.status_code == 200
         assert scheduler.worker_finished_calls == ["worker-1"]
 
-
-    def test_legacy_route_not_available(self, client: TestClient, job: TranscriptionJob):
+    def test_legacy_route_not_available(
+        self, client: TestClient, job: TranscriptionJob
+    ):
         response = client.post(
             f"/worker/{job.id}/result",
             json={"job_id": job.id, "success": True, "job_type": "transcription"},

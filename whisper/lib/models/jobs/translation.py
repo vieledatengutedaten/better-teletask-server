@@ -2,7 +2,6 @@ from typing import Literal, TypeAlias, override
 
 from lib.models.jobs.base import BaseJob, JobParamsBase, JobResultBase, JobType
 
-
 Language: TypeAlias = Literal["en", "de", "original"]
 
 TARGET_LANGUAGES: list[Language] = ["en", "de"]
@@ -28,6 +27,4 @@ class TranslationJob(BaseJob):
     @override
     def model_post_init(self, __context: object) -> None:
         if not self.id:
-            self.id = (
-                f"tl-{self.params.teletask_id}-{self.params.from_language}-{self.params.to_language}"
-            )
+            self.id = f"tl-{self.params.teletask_id}-{self.params.from_language}-{self.params.to_language}"

@@ -38,7 +38,9 @@ class TestPing:
 class TestGetQueues:
     @patch("app.api.scheduling_routes.queue_manager")
     @patch("app.api.scheduling_routes.get_scheduler")
-    def test_returns_queued_and_active_jobs(self, mock_get_scheduler, mock_queue_manager, client):
+    def test_returns_queued_and_active_jobs(
+        self, mock_get_scheduler, mock_queue_manager, client
+    ):
         whisper_job = TranscriptionJob(params=TranscriptionParams(teletask_id=100))
         active_job = TranscriptionJob(params=TranscriptionParams(teletask_id=200))
 
@@ -57,7 +59,10 @@ class TestGetQueues:
         assert data["active"][0]["params"]["teletask_id"] == 200
 
     @patch("app.api.scheduling_routes.queue_manager")
-    @patch("app.api.scheduling_routes.get_scheduler", side_effect=RuntimeError("not initialized"))
+    @patch(
+        "app.api.scheduling_routes.get_scheduler",
+        side_effect=RuntimeError("not initialized"),
+    )
     def test_returns_empty_active_when_scheduler_unavailable(
         self, _mock_get_scheduler, mock_queue_manager, client
     ):
@@ -101,8 +106,13 @@ class TestGetScheduler:
         assert data["resources"]["ollama"]["available_capacity"] == 3
         assert "worker-1" in data["resources"]["whisper"]["active_workers"]
 
-    @patch("app.api.scheduling_routes.get_scheduler", side_effect=RuntimeError("not initialized"))
-    def test_returns_empty_snapshot_when_scheduler_unavailable(self, _mock_get_scheduler, client):
+    @patch(
+        "app.api.scheduling_routes.get_scheduler",
+        side_effect=RuntimeError("not initialized"),
+    )
+    def test_returns_empty_snapshot_when_scheduler_unavailable(
+        self, _mock_get_scheduler, client
+    ):
         from app.scheduler.registry import RESOURCES
 
         response = client.get("/scheduler")

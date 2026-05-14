@@ -60,7 +60,9 @@ async def test_advance_enqueues_first_undone_step(
         done_ids=lambda: set(),
         depends_on=("scrape_lecture_data",),
     )
-    monkeypatch.setattr(pipeline_module, "ordered_pipeline_specs", lambda: [step_done, step])
+    monkeypatch.setattr(
+        pipeline_module, "ordered_pipeline_specs", lambda: [step_done, step]
+    )
 
     result = await coordinator.advance(42, priority=1)
 

@@ -1,10 +1,7 @@
-
 from collections.abc import Sequence
 from typing import TypeVar, cast
 
 from lib.models.jobs import BaseJob, JobParamsBase, JobType
-
-
 
 TJob = TypeVar("TJob", bound=BaseJob)
 TParams = TypeVar("TParams", bound=JobParamsBase)

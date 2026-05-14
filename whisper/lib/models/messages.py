@@ -3,7 +3,6 @@ from pydantic import BaseModel
 from .jobs.base import LogLevel, SchedulerStatuses
 
 
-
 class StatusUpdate(BaseModel):
     status: SchedulerStatuses
 

@@ -1,4 +1,3 @@
-
 from collections.abc import Sequence
 from typing import override
 
@@ -16,15 +15,20 @@ from lib.models.jobs import (
 )
 from app.worker.utils import require_params
 
+
 class JobPayload(BaseModel):
     worker_id: str
     job_type: JobType
     params: Sequence[dict]
 
-def build_json(worker_id: str, job_type: JobType, params: Sequence[JobParamsBase]) -> str:
+
+def build_json(
+    worker_id: str, job_type: JobType, params: Sequence[JobParamsBase]
+) -> str:
     return JobPayload(
         worker_id=worker_id, job_type=job_type, params=[p.model_dump() for p in params]
     ).model_dump_json()
+
 
 class SlurmWorker(Worker):
 
@@ -39,7 +43,7 @@ class SlurmWorker(Worker):
             case "scrape_lecture_data":
                 params = require_params(params, ScrapeLectureDataParams, job_type)
                 print(build_json(worker_id, job_type, params))
-                #raise NotImplementedError("SlurmWorker does not implement 'scrape_lecture_data' execution yet")
+                # raise NotImplementedError("SlurmWorker does not implement 'scrape_lecture_data' execution yet")
             case "transcription":
                 _ = require_params(params, TranscriptionParams, job_type)
                 raise NotImplementedError(

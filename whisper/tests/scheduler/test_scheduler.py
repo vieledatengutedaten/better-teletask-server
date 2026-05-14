@@ -15,7 +15,13 @@ from lib.models.jobs import (
     TranslationParams,
 )
 from app.scheduler.queues import QueueManager
-from app.scheduler.registry import JOB_TYPES, RESOURCES, JobTypeSpec, ResourceSpec, spec_for
+from app.scheduler.registry import (
+    JOB_TYPES,
+    RESOURCES,
+    JobTypeSpec,
+    ResourceSpec,
+    spec_for,
+)
 from app.scheduler.scheduler import Scheduler
 from app.worker.worker_manager import WorkerManager
 from app.worker.worker import Worker
@@ -346,10 +352,16 @@ class TestPriority:
         override_resources(whisper=2, ollama=2)
         override_batch_size(transcription=1, translation=1)
 
-        await queue_manager.add(make_translation(4, priority=0))   # translation normal (lowest)
-        await queue_manager.add(make_transcription(3, priority=0)) # transcription normal
-        await queue_manager.add(make_translation(2, priority=1))   # translation priority
-        await queue_manager.add(make_transcription(1, priority=1)) # transcription priority (highest)
+        await queue_manager.add(
+            make_translation(4, priority=0)
+        )  # translation normal (lowest)
+        await queue_manager.add(
+            make_transcription(3, priority=0)
+        )  # transcription normal
+        await queue_manager.add(make_translation(2, priority=1))  # translation priority
+        await queue_manager.add(
+            make_transcription(1, priority=1)
+        )  # transcription priority (highest)
 
         await scheduler._dispatch_available()
 
@@ -357,7 +369,9 @@ class TestPriority:
         # Whisper has 2 capacity → both transcription jobs dispatch first (priority=1 then priority=0).
         # Then translation (only ollama left) → priority=1 then priority=0.
         dispatched_jts = [job_type for job_type, _ in fake_worker.dispatch_order]
-        dispatched_tids = [batch[0].teletask_id for _, batch in fake_worker.dispatch_order]
+        dispatched_tids = [
+            batch[0].teletask_id for _, batch in fake_worker.dispatch_order
+        ]
         assert dispatched_jts[:2] == ["transcription", "transcription"]
         assert dispatched_tids[:2] == [1, 3]
         assert dispatched_jts[2:] == ["translation", "translation"]
@@ -480,7 +494,9 @@ class TestJobIndex:
         assert found.status == "RUNNING"
 
     @pytest.mark.asyncio
-    async def test_get_job_returns_none_for_unknown_id(self, scheduler: Scheduler) -> None:
+    async def test_get_job_returns_none_for_unknown_id(
+        self, scheduler: Scheduler
+    ) -> None:
         assert scheduler.get_job("does-not-exist") is None
 
     @pytest.mark.asyncio

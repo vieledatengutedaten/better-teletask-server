@@ -25,8 +25,7 @@ class PipelineCoordinator:
     async def advance(self, teletask_id: int, priority: int = 0) -> list[str]:
         specs = ordered_pipeline_specs()
         done_by_type: dict[JobType, bool] = {
-            spec.job_type: spec.is_done(teletask_id)
-            for spec in specs
+            spec.job_type: spec.is_done(teletask_id) for spec in specs
         }
 
         enqueued_steps: list[str] = []
@@ -52,8 +51,7 @@ class PipelineCoordinator:
     ) -> dict[str, int]:
         specs = ordered_pipeline_specs()
         done_by_type: dict[JobType, set[int]] = {
-            spec.job_type: spec.done_ids()
-            for spec in specs
+            spec.job_type: spec.done_ids() for spec in specs
         }
 
         enqueued: dict[str, int] = {}

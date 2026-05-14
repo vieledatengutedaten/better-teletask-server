@@ -8,7 +8,6 @@ from app.scheduler.queues import QueueManager
 from app.scheduler.registry import JOB_TYPES, RESOURCES, spec_for
 from app.worker.worker_manager import WorkerManager
 
-
 _scheduler: "Scheduler | None" = None
 
 
@@ -136,7 +135,9 @@ class Scheduler:
                 prepared.append(typed_job)
             else:
                 typed_job.status = "FAILED"
-                logger.warning(f"Prepare rejected job {typed_job.id}; skipping dispatch")
+                logger.warning(
+                    f"Prepare rejected job {typed_job.id}; skipping dispatch"
+                )
                 self.queue_manager.release(job_type, typed_job.id)
         return prepared
 
@@ -182,7 +183,9 @@ class Scheduler:
                         )
                     _ = self._jobs_by_id.pop(job.id, None)
                 self.queue_manager.release_all(jobs)
-                logger.info(f"Worker {worker_id} finished ({len(jobs)} job(s) on {resource})")
+                logger.info(
+                    f"Worker {worker_id} finished ({len(jobs)} job(s) on {resource})"
+                )
                 self._wake.set()
                 fire_broadcast()
                 return jobs
@@ -203,16 +206,18 @@ class Scheduler:
         limits = ", ".join(f"{r}={spec.max_workers}" for r, spec in RESOURCES.items())
         logger.info(f"Scheduler started; resource limits: {limits}")
         await asyncio.sleep(1)  # let server startup logs finish first
-        while True:             
+        while True:
             dispatched = await self._dispatch_available()
             if dispatched > 0:
                 free = ", ".join(f"{r}={self.capacity_for(r)}" for r in RESOURCES)
                 logger.info(f"Dispatched {dispatched} worker(s); free capacity: {free}")
 
-            tasks = [asyncio.create_task(self.queue_manager.wait_for_job(timeout=120)),
-                        asyncio.create_task(self._wake.wait()),]
+            tasks = [
+                asyncio.create_task(self.queue_manager.wait_for_job(timeout=120)),
+                asyncio.create_task(self._wake.wait()),
+            ]
 
-            try: 
+            try:
                 self._wake.clear()
                 _, pending = await asyncio.wait(
                     tasks,
@@ -229,4 +234,3 @@ class Scheduler:
                         except (asyncio.CancelledError, Exception):
                             pass
                 raise
-                        

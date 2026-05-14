@@ -12,8 +12,10 @@ from lib.models.jobs import (
 )
 
 """Handles pre and post job logic"""
+
+
 class JobHandler(ABC):
-    
+
     @abstractmethod
     def prepare(self, job: Job) -> bool:
         """
@@ -21,7 +23,6 @@ class JobHandler(ABC):
         Return True if preparation succeeded and the job can proceed, False to skip the job.
         """
         raise NotImplementedError
-
 
     @abstractmethod
     def parse_result(self, body: Mapping[str, object]) -> JobResult:

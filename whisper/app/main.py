@@ -50,6 +50,7 @@ app.include_router(worker_router, prefix="/worker")
 
 if ENVIRONMENT == "dev":
     from app.api.admin_routes import admin_router
+
     app.include_router(admin_router, prefix="/admin")
 
 

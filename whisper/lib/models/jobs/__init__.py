@@ -30,7 +30,6 @@ from lib.models.jobs.translation import (
     TranslationResult,
 )
 
-
 Job: TypeAlias = ScrapeLectureDataJob | TranscriptionJob | TranslationJob
 
 JobResult: TypeAlias = Annotated[
