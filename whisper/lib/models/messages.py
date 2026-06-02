@@ -14,3 +14,4 @@ class LogMessage(BaseModel):
 
 class FailureReport(BaseModel):
     reason: str
+

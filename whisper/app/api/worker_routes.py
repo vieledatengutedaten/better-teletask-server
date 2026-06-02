@@ -24,8 +24,13 @@ def _require_worker_owns_job(scheduler: Scheduler, worker_id: str, job_id: str) 
     job = _require_job(scheduler, job_id)
     owner = scheduler.get_worker_id_for_job(job_id)
     if owner is None:
+        logger.warning(f"owner not found for job {job_id}", extra={"id": "SCHEDULER"})
         raise HTTPException(status_code=404, detail=f"Job {job_id} is not active")
     if owner != worker_id:
+        logger.warning(
+            f"Worker {worker_id} attempted to update job {job_id} owned by {owner}",
+            extra={"id": "SCHEDULER"}
+            )
         raise HTTPException(
             status_code=409,
             detail=f"Job {job_id} belongs to worker {owner}, not {worker_id}",
@@ -64,13 +69,15 @@ async def _report_failure_common(
     job.status = "FAILED"  # TODO what to do with failed jobs
     handler = spec_for(job.job_type).handler
     await handler.handle_failed(job, reason)
-    _ = scheduler.worker_finished(worker_id)
+    # TODO maybe dont cancel worker
+    # _ = scheduler.worker_finished(worker_id)
     return {"message": f"Failure recorded for job {job.id}"}
 
 
 def _require_job(scheduler: Scheduler, job_id: str) -> Job:
     job = scheduler.get_job(job_id)
     if job is None:
+        logger.warning(f"Job {job_id} not found in scheduler", extra={"id": "SCHEDULER"})
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
     return job
 

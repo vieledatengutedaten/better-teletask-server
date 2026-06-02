@@ -15,6 +15,7 @@ from lib.models.jobs.base import (
     SLURMWorkerStatuses,
 )
 from lib.models.jobs.scrape import (
+    LectureScrapeData,
     ScrapeLectureDataJob,
     ScrapeLectureDataParams,
     ScrapeLectureDataResult,
@@ -50,6 +51,7 @@ __all__ = [
     "JobResultBase",
     "JobType",
     "Language",
+    "LectureScrapeData",
     "LogLevel",
     "ResourceType",
     "SchedulerStatuses",

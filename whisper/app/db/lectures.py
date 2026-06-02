@@ -14,6 +14,7 @@ from app.db.schema import (
     VttFileRecord,
 )
 from lib.models.domain import SeriesData
+from lib.models.jobs import LectureScrapeData
 
 from lib.core.logger import logger
 
@@ -89,21 +90,21 @@ def lecturer_id_exists(lecturer_id):
 
 
 @db_operation(
-    success_message="Successfully added lecture data for Lecture ID {lecture_data[lecture_id]}."
+    success_message="Successfully added lecture data for Lecture ID {lecture_data.lecture_id}."
 )
-def add_lecture_data(lecture_data):
+def add_lecture_data(lecture_data: LectureScrapeData):
     with get_session() as session:
 
-        teletaskid = lecture_data["lecture_id"]
-        lecturer_ids = lecture_data["lecturer_ids"]
-        lecturer_names = lecture_data["lecturer_names"]
-        lecture_date = datetime.strptime(lecture_data["date"], "%B %d, %Y").date()
-        language = "en" if lecture_data["language"] == "English" else "de"
-        duration = lecture_data["duration"]
-        lecture_title = lecture_data["lecture_title"]
-        series_id = lecture_data["series_id"]
-        series_name = lecture_data["series_name"]
-        url = lecture_data["url"]
+        teletaskid = lecture_data.lecture_id
+        lecturer_ids = lecture_data.lecturer_ids
+        lecturer_names = lecture_data.lecturer_names
+        lecture_date = datetime.strptime(lecture_data.date or "", "%B %d, %Y").date()
+        language = "en" if lecture_data.language == "English" else "de"
+        duration = lecture_data.duration
+        lecture_title = lecture_data.lecture_title
+        series_id = lecture_data.series_id
+        series_name = lecture_data.series_name
+        url = lecture_data.url
 
         if lecture_date.month < 3 or lecture_date.month > 10:
             semester = f"WT {lecture_date.year-1}/{lecture_date.year}"

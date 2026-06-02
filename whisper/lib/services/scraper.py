@@ -1,5 +1,4 @@
 import re
-from typing import Any
 import requests
 from requests.models import Response, HTTPError
 from bs4 import BeautifulSoup
@@ -11,6 +10,7 @@ from sqlalchemy.sql import elements
 
 from lib.core.config import USERNAME_COOKIE, BASE_URL
 from lib.core.logger import logger
+from lib.models.jobs import LectureScrapeData
 
 CHAIN_PEM = Path(__file__).parent / "chain.pem"
 
@@ -129,7 +129,7 @@ def pingVideoByID(id) -> str:
     try:
         response = fetchBody(id)
     except HTTPError as e:
-        logger.error(f"Error fetching body: {e}", extra={"id": id})
+        logger.error(f"Error fetching body: {e.response.status_code}", extra={"id": id})
         return ""
     if response.status_code == 200:
         logger.info("Code 200, Video exists", extra={"id": id})
@@ -159,7 +159,7 @@ def scrape_mp4_url_from_teletaskid(id, response=None) -> str:
         try:
             response = fetchBody(id)
         except HTTPError as e:
-            logger.error(f"Error fetching body:{e}", extra={"id": id})
+            logger.error(f"Error fetching body:{e.response.status_code}", extra={"id": id})
             return ""
 
     return fetchMP4(id, response)
@@ -167,10 +167,11 @@ def scrape_mp4_url_from_teletaskid(id, response=None) -> str:
 
 def scrape_lecture_data(
     id: int, response: Response | None = None
-) -> dict[str, Any] | None:
+) -> LectureScrapeData | None:
     """
     Scrape lecture metadata from the tele-task page.
-    Returns: dict with lecturer_ids, date, language, duration, title, series info, or None on failure.
+    Returns: LectureScrapeData with lecturer_ids, date, language, duration, title,
+    series info, or None on failure.
     """
     if response is None:
         try:
@@ -215,17 +216,20 @@ def scrape_lecture_data(
     language = find_field("Language")
     duration = find_field("Duration")
 
-    lecture_data = {
-        "lecture_id": id,
-        "lecturer_ids": lecturer_ids,
-        "lecturer_names": lecturer_names,
-        "date": date,
-        "language": language,
-        "duration": duration,
-        "lecture_title": lecture_name,
-        "series_id": series_id,
-        "series_name": series_name,
-    }
+    url = fetchMP4(id, response)
+
+    lecture_data = LectureScrapeData(
+        lecture_id=id,
+        lecturer_ids=lecturer_ids,
+        lecturer_names=lecturer_names,
+        date=date,
+        language=language,
+        duration=duration,
+        lecture_title=lecture_name,
+        series_id=series_id,
+        series_name=series_name,
+        url=url or None,
+    )
     logger.info("Scraped lecture data successfully.", extra={"id": id})
     logger.debug(f"Fetched lecture data: {lecture_data}", extra={"id": id})
     return lecture_data

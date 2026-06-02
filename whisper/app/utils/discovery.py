@@ -1,14 +1,11 @@
-"""Universe of teletask_ids the pipeline should process.
-
-Today: 1..biggest known, minus blacklist. The biggest known id is whichever
-is larger — the highest id with VTT data, or the highest id on the blacklist
-(some blacklisted ids are newer than anything in vtt_files).
-"""
+import asyncio
 
 from app.db.blacklist import get_blacklisted_ids
 from app.db.vtt_files import getHighestTeletaskID
 from lib.core.logger import logger
 from lib.services.scraper import pingVideoByID
+from app.scheduler.pipeline import PipelineCoordinator
+from app.scheduler.scheduler import Scheduler
 
 
 def get_teletask_ids() -> set[int]:
@@ -23,6 +20,28 @@ def get_teletask_ids() -> set[int]:
     biggest = max(candidates)
     return set(range(1, biggest + 1)) - set(blacklisted)
 
+async def run_discovery_loop(coordinator: PipelineCoordinator, scheduler: Scheduler, interval_seconds: int = 600):
+    #await asyncio.sleep(20)  # Initial delay before first discovery
+    while True:
+        try:
+            _ = await discover_new_teletask_ids(coordinator, scheduler)
+        except Exception as e:
+            logger.error(f"Error during discovery loop: {e}", exc_info=True)
+        await asyncio.sleep(interval_seconds)
+        
+
+async def discover_new_teletask_ids(coordinator: PipelineCoordinator, scheduler: Scheduler) -> list[int]:
+    """Check for new teletask_ids beyond the current known universe."""
+    new_ids = get_upper_ids()
+    if new_ids:
+        logger.info(f"Discovered new teletask IDs: {new_ids}")
+        jobs = await coordinator.initialize_jobs(set(new_ids), scheduler)
+        count = sum(jobs.values())
+        logger.info(f"Enqueued {count} new job(s) for discovered teletask IDs: {jobs}")
+
+    else:
+        logger.info("No new teletask IDs discovered.")
+    return new_ids
 
 def get_upper_ids() -> list[int]:
     ids: list[int] = []

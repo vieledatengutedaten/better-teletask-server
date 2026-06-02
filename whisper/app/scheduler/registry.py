@@ -78,7 +78,7 @@ JOB_TYPES: dict[JobType, JobTypeSpec] = {
     "scrape_lecture_data": JobTypeSpec(
         job_type="scrape_lecture_data",
         resource="cpu",
-        worker_factory=SlurmWorker,
+        worker_factory=LocalWorker,
         job_cls=ScrapeLectureDataJob,
         result_cls=ScrapeLectureDataResult,
         handler=ScrapeLectureDataJobHandler(),
@@ -161,7 +161,7 @@ validate_job_graph(JOB_TYPES)
 _DEFAULT_MAX_WORKERS: dict[ResourceType, int] = {
     "whisper": 0,
     "ollama": 0,
-    "cpu": 1,
+    "cpu": 0,
 }
 
 

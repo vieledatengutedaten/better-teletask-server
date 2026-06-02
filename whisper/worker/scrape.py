@@ -41,12 +41,10 @@ def _run_single_job(
             )
 
         try:
-            result = ScrapeLectureDataResult.model_validate(
-                {
-                    "job_id": job.job_id,
-                    "success": True,
-                    **lecture_data,
-                }
+            result = ScrapeLectureDataResult(
+                job_id=job.job_id,
+                success=True,
+                lecture_data=lecture_data,
             )
         except Exception as exc:
             return report_job_failed(

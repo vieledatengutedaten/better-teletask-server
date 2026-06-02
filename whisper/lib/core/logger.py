@@ -62,7 +62,6 @@ root_logger = logging.getLogger("btt_root_logger")
 root_logger.setLevel(logging.DEBUG)
 root_logger.propagate = False
 
-
 if ENVIRONMENT == "worker":
     # Worker mode: send logs to scheduler, also print to stderr
     SCHEDULER_URL = os.environ.get("SCHEDULER_URL", "")
@@ -93,7 +92,7 @@ else:
     file_handler = logging.FileHandler(
         LOG_FILE_PATH / "whisper.log", mode="a", encoding="utf-8"
     )
-    file_handler.setLevel(logging.INFO)
+    file_handler.setLevel(LEVEL_NAME)
     file_handler.setFormatter(formatter)
     root_logger.addHandler(file_handler)
 
@@ -103,7 +102,7 @@ else:
     root_logger.addHandler(stream_handler)
 
     access_logger = logging.getLogger("btt_access_logger")
-    access_logger.setLevel(logging.DEBUG)
+    access_logger.setLevel(logging.INFO)
     access_logger.propagate = False
     rotating_file_handler = TimedRotatingFileHandler(
         LOG_FILE_PATH / "access.log",

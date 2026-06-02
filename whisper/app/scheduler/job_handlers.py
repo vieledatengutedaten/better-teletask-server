@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from typing import override
 
+from app.db.lectures import add_lecture_data
 from lib.core.logger import logger
 from lib.models.jobs import (
     Job,
@@ -101,9 +102,10 @@ class ScrapeLectureDataJobHandler(JobHandler):
         if not isinstance(result, ScrapeLectureDataResult):
             raise TypeError("ScrapeLectureDataJobHandler received non-scrape result")
         logger.info(f"[mock] handled scrape_lecture_data result for {result.job_id}")
+        add_lecture_data(result.lecture_data)
 
     @override
     async def handle_failed(self, job: Job, reason: str) -> None:
         # TODO scrape failure leaves the pipeline dead for this teletask_id;
         # revisit once blacklist/retry policy is decided.
-        logger.error(f"[mock] scrape_lecture_data job {job.id} failed: {reason}")
+        logger.error(f"scrape_lecture_data job {job.id} failed: {reason}")

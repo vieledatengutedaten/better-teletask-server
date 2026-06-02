@@ -6,7 +6,7 @@ from fastapi import FastAPI
 # setup logging — must be imported before other modules to configure handlers
 from lib.core.logger import logger
 from app.db.migrations import initDatabase
-from app.utils.discovery import get_teletask_ids
+from app.utils.discovery import get_teletask_ids, run_discovery_loop
 from app.scheduler.pipeline import PipelineCoordinator, set_coordinator
 from app.scheduler.queues import queue_manager
 from app.scheduler.scheduler import Scheduler, set_scheduler
@@ -29,16 +29,22 @@ async def lifespan(app: FastAPI):
     counts = await coordinator.initialize_jobs(teletask_ids, scheduler)
     total = sum(counts.values())
     logger.info(
-        f"Application startup: {len(teletask_ids)} teletask_id(s) in universe, "
-        f"{total} job(s) enqueued — {counts}"
+        f"Application startup: {len(teletask_ids)} teletask_id(s) in universe, {total} job(s) enqueued — {counts}"
     )
 
+    upper_id_task = asyncio.create_task(run_discovery_loop(coordinator,scheduler))
     scheduler_task = asyncio.create_task(scheduler.run())
     yield
 
     scheduler_task.cancel()
+    upper_id_task.cancel()
     try:
         await scheduler_task
+    except asyncio.CancelledError:
+        pass
+
+    try:
+        await upper_id_task
     except asyncio.CancelledError:
         pass
     logger.info("Application shutdown complete.")

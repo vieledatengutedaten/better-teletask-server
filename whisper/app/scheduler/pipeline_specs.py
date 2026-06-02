@@ -13,6 +13,7 @@ from lib.models.jobs import (
 from app.db.lectures import get_all_lecture_ids, get_language_of_lecture
 from app.db.vtt_files import (
     get_all_original_vtt_ids,
+    get_languages_of_translation,
     get_missing_translations,
     original_language_exists,
 )
@@ -63,8 +64,9 @@ def _existing_translations() -> dict[int, set[str]]:
     return by_tid
 
 
+# TODO this creates translation jobs for all languages
 def translate_factory(tid: int, priority: int) -> list[BaseJob]:
-    existing = _existing_translations().get(tid, set())
+    existing = get_languages_of_translation(tid) or []
     return [
         TranslationJob(
             params=TranslationParams(
