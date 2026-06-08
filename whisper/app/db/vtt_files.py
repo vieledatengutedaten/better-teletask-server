@@ -3,7 +3,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.db.connection import get_session
 from app.db.error_handling import db_operation
-from app.db.schema import VttFileRecord
+from app.db.schema import VttFileRecord, LectureDataRecord
 from lib.models.domain import VttFile
 from lib.core.config import OUTPUT_PATH, ASR_MODEL, COMPUTE_TYPE
 
@@ -162,7 +162,7 @@ def get_original_vtt_by_id(teletaskid: int):
 def getHighestTeletaskID() -> int | None:
     with get_session() as session:
         max_id = session.execute(
-            select(func.max(VttFileRecord.lecture_id))
+            select(func.max(LectureDataRecord.lecture_id))
         ).scalar_one()
         logger.info(f"Highest Teletask ID in available in database: {max_id}")
         return max_id
@@ -172,7 +172,7 @@ def getHighestTeletaskID() -> int | None:
 def getSmallestTeletaskID() -> int | None:
     with get_session() as session:
         min_id = session.execute(
-            select(func.min(VttFileRecord.lecture_id))
+            select(func.min(LectureDataRecord.lecture_id))
         ).scalar_one()
         logger.info(f"Smallest Teletask ID in available in database: {min_id}")
         return min_id

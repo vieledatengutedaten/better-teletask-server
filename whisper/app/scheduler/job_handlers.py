@@ -99,10 +99,12 @@ class ScrapeLectureDataJobHandler(JobHandler):
 
     @override
     async def handle_result(self, job: Job, result: JobResult) -> None:
-        if not isinstance(result, ScrapeLectureDataResult):
+        if result.job_type != "scrape_lecture_data" or not isinstance(result, ScrapeLectureDataResult):
             raise TypeError("ScrapeLectureDataJobHandler received non-scrape result")
-        logger.info(f"[mock] handled scrape_lecture_data result for {result.job_id}")
-        add_lecture_data(result.lecture_data)
+        else:
+            logger.info(f"[mock] handled scrape_lecture_data result for {result.job_id}")
+            add_lecture_data(result.lecture_data)
+            logger.info(f"lecturedata {result.lecture_data}")
 
     @override
     async def handle_failed(self, job: Job, reason: str) -> None:

@@ -21,4 +21,12 @@ dependencies = [
     "whisperx>=3.8.4",
     "websockets==16.0",
     "torchcodec>=0.7,<0.8",
+    "poethepoet>=0.46.0",
 ]
+
+[tool.poe.tasks]
+vm    = "uvicorn app.main:app"
+vmr   = "uvicorn app.main:app --reload"
+user  = "uvicorn app.userapp:app"
+userr = "uvicorn app.userapp:app --reload"
+

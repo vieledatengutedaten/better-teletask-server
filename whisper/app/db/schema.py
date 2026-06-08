@@ -63,6 +63,7 @@ class LectureDataRecord(Base):
         ForeignKey("series_data.series_id", ondelete="SET NULL"),
         nullable=True,
     )
+    lecturer_ids: Mapped[list[int]] = mapped_column(ARRAY(Integer), nullable=False)
     semester: Mapped[str | None] = mapped_column(String(50), nullable=True)
     duration: Mapped[dt_timedelta | None] = mapped_column(Interval, nullable=True)
     title: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -115,7 +116,6 @@ class VttLineRecord(Base):
         Integer, ForeignKey("series_data.series_id", ondelete="CASCADE"), nullable=False
     )
     language: Mapped[str] = mapped_column(String(50), nullable=False)
-    lecturer_ids: Mapped[list[int]] = mapped_column(ARRAY(Integer), nullable=False)
     line_number: Mapped[int] = mapped_column(Integer, nullable=False)
     ts_start: Mapped[int] = mapped_column(Integer, nullable=False)
     ts_end: Mapped[int] = mapped_column(Integer, nullable=False)

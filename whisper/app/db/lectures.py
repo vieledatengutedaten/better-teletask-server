@@ -153,6 +153,7 @@ def add_lecture_data(lecture_data: LectureScrapeData):
                 lecture_id=teletaskid,
                 language=language,
                 date=lecture_date,
+                lecturer_ids=lecturer_ids,
                 series_id=series_id,
                 semester=semester,
                 duration=duration,

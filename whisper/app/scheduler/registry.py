@@ -161,7 +161,7 @@ validate_job_graph(JOB_TYPES)
 _DEFAULT_MAX_WORKERS: dict[ResourceType, int] = {
     "whisper": 0,
     "ollama": 0,
-    "cpu": 0,
+    "cpu": 1,
 }
 
 
