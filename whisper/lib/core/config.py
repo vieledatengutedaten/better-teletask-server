@@ -13,6 +13,7 @@ DB_USER = os.environ.get("POSTGRES_USER")
 DB_PASS = os.environ.get("POSTGRES_PASSWORD")
 DB_HOST = os.environ.get("DB_HOST")
 DB_PORT = os.environ.get("DB_PORT")
+SLURM_USER_TOKEN = os.environ.get("SLURM_USER_TOKEN")
 
 # --- Whisper / ASR ---
 ASR_MODEL = os.environ.get("ASR_MODEL")
