@@ -27,7 +27,7 @@ class SchedulerPostHandler(logging.Handler):
 	@override
 	def emit(self, record: logging.LogRecord) -> None:
 		try:
-			#print(f"Emitting log record to scheduler: {record.getMessage()}")
+			print(f"Emitting log record to scheduler: {record.getMessage()}")
 			level_name = record.levelname.lower()
 			level: LogLevel
 			if level_name in ("debug", "info", "warning", "error", "critical"):

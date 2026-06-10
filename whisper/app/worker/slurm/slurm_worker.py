@@ -53,6 +53,7 @@ class SlurmWorker(Worker):
                     job_type,
                 )
                 print(build_json(worker_id, job_type, payloads))
+                # dispatch
                 # raise NotImplementedError("SlurmWorker does not implement 'scrape_lecture_data' execution yet")
             case "transcription":
                 _ = require_params(
@@ -60,9 +61,8 @@ class SlurmWorker(Worker):
                     TranscriptionParams,
                     job_type,
                 )
-                raise NotImplementedError(
-                    "SlurmWorker does not implement 'transcription' execution yet"
-                )
+                print(build_json(worker_id, job_type, payloads))
+                raise NotImplementedError("SlurmWorker does not implement 'transcription' execution yet")
             case "translation":
                 _ = require_params(
                     [payload.params for payload in payloads],

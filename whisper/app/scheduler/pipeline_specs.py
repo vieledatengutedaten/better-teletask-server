@@ -38,9 +38,10 @@ def scrape_is_done(tid: int) -> bool:
 
 
 def transcribe_factory(tid: int, priority: int) -> list[BaseJob]:
+    language: str | None = get_language_of_lecture(tid)
     return [
         TranscriptionJob(
-            params=TranscriptionParams(teletask_id=tid),
+            params=TranscriptionParams(teletask_id=tid, language=language),
             priority=priority,
         )
     ]

@@ -1,0 +1,26 @@
+{
+  "worker_id": "worker-1",
+  "job_type": "transcription",
+  "jobs": [
+    {
+      "job_id": "tc-11786-turbo-int8",
+      "params": {
+        "teletask_id": 11786,
+        "initial_prompt": null,
+        "asr_model": "turbo",
+        "compute_type": "int8",
+        "language": "en"
+      }
+    },
+    {
+      "job_id": "tc-11785-turbo-int8",
+      "params": {
+        "teletask_id": 11785,
+        "initial_prompt": null,
+        "asr_model": "turbo",
+        "compute_type": "int8",
+        "language": "en"
+      }
+    }
+  ]
+}

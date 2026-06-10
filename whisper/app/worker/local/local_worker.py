@@ -43,8 +43,11 @@ class LocalWorker(Worker):
                     TranscriptionParams,
                     job_type,
                 )
-                for params in transcription_params:
-                    await asyncio.to_thread(run_transcription, params)
+                scrape_payloads = [
+                    JobPayload(job_id=payload.job_id, params=params)
+                    for payload, params in zip(payloads, transcription_params, strict=True)
+                ]
+
             case "translation":
                 _ = require_params(
                     [payload.params for payload in payloads],

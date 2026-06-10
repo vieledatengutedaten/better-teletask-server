@@ -1,4 +1,3 @@
-# setup logging
 from lib.core.logger import logger
 
 logger.propagate = False
@@ -9,11 +8,16 @@ from whisperx.utils import get_writer
 from lib.core.config import ASR_MODEL, COMPUTE_TYPE, INPUT_PATH, OUTPUT_PATH, DEVICE
 from app.db.lectures import get_language_of_lecture
 
-device = DEVICE
-model = whisperx.load_model(ASR_MODEL, device=device, compute_type=COMPUTE_TYPE)
+
+def prepare_model(asr_model: str, device: str, compute_type: str):
+    return whisperx.load_model(asr_model, device=device, compute_type=compute_type)
 
 
-def transcribeVideoByID(id: int) -> str:
+def transcribeVideoByID(id: int, model: Any | None ) -> str:
+
+    if model is None:
+        model = whisperx.load_model(ASR_MODEL, device=DEVICE, compute_type=COMPUTE_TYPE)
+
     file_path = INPUT_PATH / f"{id}.mp3"
 
     # fail early if input audio doesn't exist

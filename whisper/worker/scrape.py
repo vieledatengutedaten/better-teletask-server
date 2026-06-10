@@ -22,7 +22,6 @@ from worker.utils import (
 )
 
 SCRAPE_BATCH_ADAPTER = TypeAdapter(BatchPayload[ScrapeLectureDataParams])
-SCRAPE_JOB_LIST_ADAPTER = TypeAdapter(list[JobPayload[ScrapeLectureDataParams]])
 
 
 def _run_single_job(
@@ -84,10 +83,9 @@ def _load_jobs(
 ) -> tuple[str | None, list[JobPayload[ScrapeLectureDataParams]]]:
     payload = cast(object, json.load(jobs_file))
     try:
-        if isinstance(payload, dict) and "jobs" in payload:
-            batch = SCRAPE_BATCH_ADAPTER.validate_python(payload)
-            return batch.worker_id, batch.jobs
-        return None, SCRAPE_JOB_LIST_ADAPTER.validate_python(payload)
+        batch = SCRAPE_BATCH_ADAPTER.validate_python(payload)
+        return batch.worker_id, batch.jobs
+
     except ValidationError as exc:
         raise ValueError(f"Invalid scrape jobs payload: {exc}") from exc
 
@@ -100,48 +98,32 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
     )
     _ = parser.add_argument("--scheduler-url", type=str, default=None)
-    _ = parser.add_argument("--worker-id", type=str, default=None)
     return parser
 
 
 def main() -> None:
     parsed = build_parser().parse_args()
-    worker_id = cast(str | None, parsed.worker_id)
     scheduler_url = cast(str | None, parsed.scheduler_url)
     jobs_file = cast(TextIO, parsed.jobs_file)
 
+
     try:
-        batch_worker_id, jobs = _load_jobs(jobs_file)
+        worker_id, jobs = _load_jobs(jobs_file)
         print(jobs)
     except ValueError as exc:
         logger.error(str(exc))
         raise SystemExit(2) from exc
 
-    if batch_worker_id:
-        worker_id = batch_worker_id
     if not worker_id:
         logger.error("Missing worker_id in jobs payload or --worker-id")
         raise SystemExit(2)
 
 
-    ok = run_scrape(
+    run_scrape(
         jobs=jobs,
         worker_id=worker_id,
         scheduler_url=scheduler_url,
     )
-
-    print(
-        json.dumps(
-            {
-                "worker_id": worker_id,
-                "job_count": len(jobs),
-                "success": ok,
-            },
-            ensure_ascii=True,
-        )
-    )
-    if not ok:
-        raise SystemExit(1)
 
 if __name__ == "__main__":
     main()

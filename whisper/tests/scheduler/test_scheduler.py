@@ -6,9 +6,12 @@ import asyncio
 
 import pytest
 
+from collections.abc import Sequence
+
 from lib.models.jobs import (
     JobType,
     JobParamsBase,
+    JobPayload,
     TranscriptionJob,
     TranscriptionParams,
     TranslationJob,
@@ -22,6 +25,7 @@ from app.scheduler.registry import (
     ResourceSpec,
     spec_for,
 )
+import app.scheduler.scheduler as scheduler_module
 from app.scheduler.scheduler import Scheduler
 from app.worker.worker_manager import WorkerManager
 from app.worker.worker import Worker
@@ -49,7 +53,12 @@ def make_translation(
 
 
 class FakeWorker(Worker):
-    """Records dispatched batches for assertions."""
+    """Records dispatched batches for assertions.
+
+    The worker is invoked by WorkerManager.dispatch with a sequence of
+    JobPayloads; for convenience we unwrap them to their params so tests can
+    read ``batch[i].teletask_id`` directly.
+    """
 
     def __init__(self) -> None:
         self.calls_by_jobtype: dict[JobType, list[list[JobParamsBase]]] = {}
@@ -60,11 +69,12 @@ class FakeWorker(Worker):
         self,
         worker_id: str,
         job_type: JobType,
-        jobs: list[JobParamsBase],
+        payloads: Sequence[JobPayload[JobParamsBase]],
     ) -> None:
+        params = [p.params for p in payloads]
         self.worker_ids.append(worker_id)
-        self.calls_by_jobtype.setdefault(job_type, []).append(jobs)
-        self.dispatch_order.append((job_type, jobs))
+        self.calls_by_jobtype.setdefault(job_type, []).append(params)
+        self.dispatch_order.append((job_type, params))
 
     @property
     def transcribe_calls(self) -> list[list[JobParamsBase]]:
@@ -87,7 +97,20 @@ def fake_worker() -> FakeWorker:
 
 @pytest.fixture
 def fake_worker_manager(fake_worker: FakeWorker) -> WorkerManager:
-    return WorkerManager(workers={r: fake_worker for r in RESOURCES})
+    return WorkerManager(workers={jt: fake_worker for jt in JOB_TYPES})
+
+
+async def dispatch_available(scheduler: Scheduler) -> int:
+    """Run one dispatch pass and let the worker tasks spawned by
+    WorkerManager.dispatch run.
+
+    WorkerManager.dispatch fires each worker via asyncio.create_task, so the
+    FakeWorker only records after the loop yields. A single sleep(0) flushes
+    every task created during the pass.
+    """
+    dispatched = await scheduler._dispatch_available()
+    await asyncio.sleep(0)
+    return dispatched
 
 
 @pytest.fixture
@@ -98,6 +121,22 @@ def scheduler(
         queue_manager=queue_manager,
         worker_manager=fake_worker_manager,
     )
+
+
+@pytest.fixture(autouse=True)
+def default_resource_limits(monkeypatch: pytest.MonkeyPatch):
+    """Give every scheduler test usable per-resource capacity.
+
+    Production defaults to whisper=0/ollama=0/cpu=1 (real limits come from
+    *_MAX_WORKERS env vars), which would dispatch nothing. Tests that care
+    about exact limits override these via the ``override_resources`` fixture.
+    """
+    for resource, max_workers in (("whisper", 2), ("ollama", 3), ("cpu", 8)):
+        monkeypatch.setitem(
+            RESOURCES,
+            resource,
+            ResourceSpec(resource=resource, max_workers=max_workers),
+        )
 
 
 @pytest.fixture
@@ -128,6 +167,7 @@ def override_batch_size(monkeypatch: pytest.MonkeyPatch):
                 JobTypeSpec(
                     job_type=current.job_type,
                     resource=current.resource,
+                    worker_factory=current.worker_factory,
                     job_cls=current.job_cls,
                     result_cls=current.result_cls,
                     handler=current.handler,
@@ -158,7 +198,7 @@ class TestCapacity:
     ) -> None:
         whisper_cap = scheduler.capacity_for("whisper")
         await queue_manager.add(make_transcription(1))
-        dispatched = await scheduler._dispatch_available()
+        dispatched = await dispatch_available(scheduler)
         assert dispatched == 1
         assert scheduler.capacity_for("whisper") == whisper_cap - 1
 
@@ -168,7 +208,7 @@ class TestCapacity:
     ) -> None:
         whisper_cap = scheduler.capacity_for("whisper")
         await queue_manager.add(make_transcription(1))
-        await scheduler._dispatch_available()
+        await dispatch_available(scheduler)
         worker_id = next(iter(scheduler._active["whisper"].keys()))
         scheduler.worker_finished(worker_id)
         assert scheduler.capacity_for("whisper") == whisper_cap
@@ -195,7 +235,7 @@ class TestBatching:
         override_batch_size(transcription=5)
         for i in range(8):
             await queue_manager.add(make_transcription(i))
-        await scheduler._dispatch_available()
+        await dispatch_available(scheduler)
         # batch_size=5, so first worker gets 5 jobs, second gets 3
         assert len(fake_worker.transcribe_calls) == 2
         assert len(fake_worker.transcribe_calls[0]) == 5
@@ -214,7 +254,7 @@ class TestBatching:
         for i in range(3):
             await queue_manager.add(make_transcription(i))
         await queue_manager.add(make_translation(10))
-        await scheduler._dispatch_available()
+        await dispatch_available(scheduler)
         assert len(fake_worker.transcribe_calls) == 1
         assert len(fake_worker.translate_calls) == 1
         assert len(fake_worker.transcribe_calls[0]) == 3
@@ -224,7 +264,7 @@ class TestBatching:
     async def test_empty_queues_dispatch_nothing(
         self, scheduler: Scheduler, fake_worker: FakeWorker
     ) -> None:
-        dispatched = await scheduler._dispatch_available()
+        dispatched = await dispatch_available(scheduler)
         assert dispatched == 0
         assert fake_worker.dispatch_order == []
 
@@ -248,10 +288,10 @@ class TestBatching:
         monkeypatch.setattr(
             handler,
             "prepare",
-            lambda job: job.teletask_id != 3,
+            lambda job: job.params.teletask_id != 3,
         )
 
-        dispatched = await scheduler._dispatch_available()
+        dispatched = await dispatch_available(scheduler)
 
         assert dispatched == 1
         assert len(fake_worker.transcribe_calls) == 1
@@ -279,7 +319,7 @@ class TestBatching:
         handler = spec_for("transcription").handler
         monkeypatch.setattr(handler, "prepare", lambda job: False)
 
-        dispatched = await scheduler._dispatch_available()
+        dispatched = await dispatch_available(scheduler)
 
         assert dispatched == 0
         assert len(fake_worker.transcribe_calls) == 0
@@ -302,7 +342,7 @@ class TestBatching:
         handler = spec_for("transcription").handler
         monkeypatch.setattr(handler, "prepare", lambda _job: False)
 
-        dispatched = await scheduler._dispatch_available()
+        dispatched = await dispatch_available(scheduler)
 
         assert dispatched == 0
         assert await queue_manager.add(make_transcription(55)) is True
@@ -319,7 +359,7 @@ class TestPriority:
         """Transcription has higher base_priority than translation."""
         await queue_manager.add(make_translation(1))
         await queue_manager.add(make_transcription(2))
-        await scheduler._dispatch_available()
+        await dispatch_available(scheduler)
         # Transcription dispatched first
         assert fake_worker.dispatch_order[0][0] == "transcription"
 
@@ -334,7 +374,7 @@ class TestPriority:
         override_batch_size(transcription=2)
         await queue_manager.add(make_transcription(1, priority=0))
         await queue_manager.add(make_transcription(2, priority=1))
-        await scheduler._dispatch_available()
+        await dispatch_available(scheduler)
         batch = fake_worker.transcribe_calls[0]
         assert batch[0].teletask_id == 2
         assert batch[1].teletask_id == 1
@@ -363,7 +403,7 @@ class TestPriority:
             make_transcription(1, priority=1)
         )  # transcription priority (highest)
 
-        await scheduler._dispatch_available()
+        await dispatch_available(scheduler)
 
         # Transcription has higher base_priority, drained until whisper full or queue empty.
         # Whisper has 2 capacity → both transcription jobs dispatch first (priority=1 then priority=0).
@@ -392,7 +432,7 @@ class TestPerResourceCapacity:
         override_batch_size(transcription=5)
         for i in range(20):
             await queue_manager.add(make_transcription(i))
-        await scheduler._dispatch_available()
+        await dispatch_available(scheduler)
         # batch_size=5, max_workers=3 → 3 workers dispatched with 5+5+5 jobs
         assert len(fake_worker.transcribe_calls) == 3
         assert scheduler.capacity_for("whisper") == 0
@@ -412,11 +452,11 @@ class TestPerResourceCapacity:
         override_batch_size(transcription=5)
         for i in range(15):
             await queue_manager.add(make_transcription(i))
-        await scheduler._dispatch_available()
+        await dispatch_available(scheduler)
         assert scheduler.capacity_for("whisper") == 0
 
         await queue_manager.add(make_transcription(99))
-        dispatched = await scheduler._dispatch_available()
+        dispatched = await dispatch_available(scheduler)
         assert dispatched == 0
 
     @pytest.mark.asyncio
@@ -436,7 +476,7 @@ class TestPerResourceCapacity:
         await queue_manager.add(make_translation(10))
         await queue_manager.add(make_translation(11))
 
-        await scheduler._dispatch_available()
+        await dispatch_available(scheduler)
 
         assert scheduler.capacity_for("whisper") == 0
         assert scheduler.capacity_for("ollama") == 0
@@ -455,7 +495,7 @@ class TestActiveJobs:
         override_batch_size(transcription=5)
         for i in range(3):
             await queue_manager.add(make_transcription(i))
-        await scheduler._dispatch_available()
+        await dispatch_available(scheduler)
         assert len(scheduler.active_jobs) == 3
         assert all(j.status == "RUNNING" for j in scheduler.active_jobs)
 
@@ -474,7 +514,7 @@ class TestActiveJobs:
         await queue_manager.add(make_transcription(1))
         await queue_manager.add(make_transcription(2))
         await queue_manager.add(make_translation(99))
-        await scheduler._dispatch_available()
+        await dispatch_available(scheduler)
         assert scheduler.active_teletask_ids("transcription") == {1, 2}
         assert scheduler.active_teletask_ids("translation") == {99}
 
@@ -486,7 +526,7 @@ class TestJobIndex:
     ) -> None:
         job = make_transcription(42)
         await queue_manager.add(job)
-        await scheduler._dispatch_available()
+        await dispatch_available(scheduler)
 
         found = scheduler.get_job(job.id)
         assert found is not None
@@ -505,7 +545,7 @@ class TestJobIndex:
     ) -> None:
         job = make_translation(99)
         await queue_manager.add(job)
-        await scheduler._dispatch_available()
+        await dispatch_available(scheduler)
 
         worker_id = next(iter(scheduler._active["ollama"].keys()))
         finished_jobs = scheduler.worker_finished(worker_id)
@@ -521,7 +561,7 @@ class TestJobIndex:
         self, scheduler: Scheduler, queue_manager: QueueManager
     ) -> None:
         await queue_manager.add(make_transcription(88))
-        await scheduler._dispatch_available()
+        await dispatch_available(scheduler)
 
         # While active, duplicate admission is blocked by in-flight dedupe.
         assert await queue_manager.add(make_transcription(88)) is False
@@ -543,7 +583,7 @@ class TestJobIndex:
         job2 = make_transcription(102)
         await queue_manager.add(job1)
         await queue_manager.add(job2)
-        await scheduler._dispatch_available()
+        await dispatch_available(scheduler)
 
         finished_jobs = scheduler.worker_finished_for_job(job1.id)
         assert finished_jobs is not None
@@ -563,7 +603,7 @@ class TestJobIndex:
     ) -> None:
         job = make_transcription(77)
         await queue_manager.add(job)
-        await scheduler._dispatch_available()
+        await dispatch_available(scheduler)
 
         worker_id = scheduler.get_worker_id_for_job(job.id)
         assert worker_id is not None
@@ -583,7 +623,11 @@ class TestWake:
         scheduler: Scheduler,
         queue_manager: QueueManager,
         fake_worker: FakeWorker,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        # run() sleeps STARTUP_DELAY_SECONDS before its first dispatch; drop it
+        # so the loop dispatches immediately within the test window.
+        monkeypatch.setattr(scheduler_module, "STARTUP_DELAY_SECONDS", 0.0)
         await queue_manager.add(make_transcription(1))
 
         async def finish_after_delay() -> None:

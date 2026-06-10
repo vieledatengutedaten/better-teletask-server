@@ -9,6 +9,7 @@ class TranscriptionParams(JobParamsBase):
     initial_prompt: str | None = None
     asr_model: str | None = ASR_MODEL
     compute_type: str | None = COMPUTE_TYPE
+    language: str | None = None
 
 
 class TranscriptionResult(JobResultBase):

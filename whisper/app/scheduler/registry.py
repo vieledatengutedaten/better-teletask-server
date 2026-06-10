@@ -78,7 +78,7 @@ JOB_TYPES: dict[JobType, JobTypeSpec] = {
     "scrape_lecture_data": JobTypeSpec(
         job_type="scrape_lecture_data",
         resource="cpu",
-        worker_factory=LocalWorker,
+        worker_factory=SlurmWorker,
         job_cls=ScrapeLectureDataJob,
         result_cls=ScrapeLectureDataResult,
         handler=ScrapeLectureDataJobHandler(),
@@ -94,7 +94,7 @@ JOB_TYPES: dict[JobType, JobTypeSpec] = {
     "transcription": JobTypeSpec(
         job_type="transcription",
         resource="whisper",
-        worker_factory=LocalWorker,
+        worker_factory=SlurmWorker,
         job_cls=TranscriptionJob,
         result_cls=TranscriptionResult,
         handler=TranscriptionJobHandler(),
@@ -110,7 +110,7 @@ JOB_TYPES: dict[JobType, JobTypeSpec] = {
     "translation": JobTypeSpec(
         job_type="translation",
         resource="ollama",
-        worker_factory=LocalWorker,
+        worker_factory=SlurmWorker,
         job_cls=TranslationJob,
         result_cls=TranslationResult,
         handler=TranslationJobHandler(),
@@ -159,9 +159,9 @@ validate_job_graph(JOB_TYPES)
 
 
 _DEFAULT_MAX_WORKERS: dict[ResourceType, int] = {
-    "whisper": 0,
+    "whisper": 1,
     "ollama": 0,
-    "cpu": 1,
+    "cpu": 0,
 }
 
 

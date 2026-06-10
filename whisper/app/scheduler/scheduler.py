@@ -10,6 +10,10 @@ from app.worker.worker_manager import WorkerManager
 
 _scheduler: "Scheduler | None" = None
 
+# Delay before the scheduler's first dispatch, so server startup logs finish
+# first. Module-level so tests can drop it to 0.
+STARTUP_DELAY_SECONDS: float = 1.0
+
 
 def set_scheduler(scheduler: "Scheduler") -> None:
     """Set the global scheduler instance."""
@@ -218,7 +222,7 @@ class Scheduler:
         """Run the scheduler loop and dispatch workers as needed."""
         limits = ", ".join(f"{r}={spec.max_workers}" for r, spec in RESOURCES.items())
         logger.info(f"Scheduler started; resource limits: {limits}")
-        await asyncio.sleep(1)  # let server startup logs finish first
+        await asyncio.sleep(STARTUP_DELAY_SECONDS)  # let server startup logs finish first
         while True:
             dispatched = await self._dispatch_available()
             if dispatched > 0:
