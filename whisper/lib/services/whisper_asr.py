@@ -15,7 +15,7 @@ def prepare_model(asr_model: str, device: str, compute_type: str):
     return whisperx.load_model(asr_model, device=device, compute_type=compute_type)
 
 
-def transcribeVideoByID(id: int, model: Any | None ) -> str:
+def transcribeVideoByID(id: int, model: Any | None) -> str:
 
     if model is None:
         model = whisperx.load_model(ASR_MODEL, device=DEVICE, compute_type=COMPUTE_TYPE)

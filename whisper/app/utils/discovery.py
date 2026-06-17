@@ -20,17 +20,22 @@ def get_teletask_ids() -> set[int]:
     biggest = max(candidates)
     return set(range(1, biggest + 1)) - set(blacklisted)
 
-async def run_discovery_loop(coordinator: PipelineCoordinator, scheduler: Scheduler, interval_seconds: int = 600):
-    #await asyncio.sleep(20)  # Initial delay before first discovery
+
+async def run_discovery_loop(
+    coordinator: PipelineCoordinator, scheduler: Scheduler, interval_seconds: int = 600
+):
+    # await asyncio.sleep(20)  # Initial delay before first discovery
     while True:
         try:
             _ = await discover_new_teletask_ids(coordinator, scheduler)
         except Exception as e:
             logger.error(f"Error during discovery loop: {e}", exc_info=True)
         await asyncio.sleep(interval_seconds)
-        
 
-async def discover_new_teletask_ids(coordinator: PipelineCoordinator, scheduler: Scheduler) -> list[int]:
+
+async def discover_new_teletask_ids(
+    coordinator: PipelineCoordinator, scheduler: Scheduler
+) -> list[int]:
     """Check for new teletask_ids beyond the current known universe."""
     new_ids = get_upper_ids()
     if new_ids:
@@ -42,6 +47,7 @@ async def discover_new_teletask_ids(coordinator: PipelineCoordinator, scheduler:
     else:
         logger.info("No new teletask IDs discovered.")
     return new_ids
+
 
 def get_upper_ids() -> list[int]:
     ids: list[int] = []

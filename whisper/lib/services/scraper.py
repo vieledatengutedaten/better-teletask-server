@@ -159,7 +159,9 @@ def scrape_mp4_url_from_teletaskid(id, response=None) -> str:
         try:
             response = fetchBody(id)
         except HTTPError as e:
-            logger.error(f"Error fetching body:{e.response.status_code}", extra={"id": id})
+            logger.error(
+                f"Error fetching body:{e.response.status_code}", extra={"id": id}
+            )
             return ""
 
     return fetchMP4(id, response)

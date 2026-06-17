@@ -13,7 +13,6 @@ async def verify_worker_token(authorization: str | None = Header(default=None)) 
     router dependency so it guards only the worker routes.
     """
 
-
     if not VM_WORKER_AUTH_TOKEN:
         raise HTTPException(
             status_code=500, detail="Worker auth token is not configured"
@@ -28,5 +27,5 @@ async def verify_worker_token(authorization: str | None = Header(default=None)) 
 
     if not secrets.compare_digest(token, VM_WORKER_AUTH_TOKEN):
         raise HTTPException(status_code=401, detail="Invalid worker token")
-    
+
     print("Worker authenticated successfully")

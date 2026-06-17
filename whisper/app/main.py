@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI):
         f"Application startup: {len(teletask_ids)} teletask_id(s) in universe, {total} job(s) enqueued — {counts}"
     )
 
-    upper_id_task = asyncio.create_task(run_discovery_loop(coordinator,scheduler))
+    upper_id_task = asyncio.create_task(run_discovery_loop(coordinator, scheduler))
     scheduler_task = asyncio.create_task(scheduler.run())
     yield
 

@@ -10,7 +10,11 @@ from lib.models.jobs import (
     TranslationJob,
     TranslationParams,
 )
-from app.db.lectures import get_all_lecture_ids, get_language_of_lecture, get_mp4url_of_lecture
+from app.db.lectures import (
+    get_all_lecture_ids,
+    get_language_of_lecture,
+    get_mp4url_of_lecture,
+)
 from app.db.vtt_files import (
     get_all_original_vtt_ids,
     get_languages_of_translation,
@@ -40,10 +44,12 @@ def scrape_is_done(tid: int) -> bool:
 def transcribe_factory(tid: int, priority: int) -> list[BaseJob]:
     language: str | None = get_language_of_lecture(tid)
     mp4_url: str | None = get_mp4url_of_lecture(tid)
-    
+
     return [
         TranscriptionJob(
-            params=TranscriptionParams(teletask_id=tid, language=language, mp4_url=mp4_url),
+            params=TranscriptionParams(
+                teletask_id=tid, language=language, mp4_url=mp4_url
+            ),
             priority=priority,
         )
     ]

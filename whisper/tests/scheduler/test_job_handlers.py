@@ -166,9 +166,14 @@ class TestScrapeJobLifecycle:
         assert scheduler.capacity_for("cpu") == cpu_cap
 
         # Job is no longer in flight, so it may be re-enqueued.
-        assert await queue_manager.add(
-            ScrapeLectureDataJob(params=ScrapeLectureDataParams(teletask_id=teletask_id))
-        ) is True
+        assert (
+            await queue_manager.add(
+                ScrapeLectureDataJob(
+                    params=ScrapeLectureDataParams(teletask_id=teletask_id)
+                )
+            )
+            is True
+        )
 
 
 class TestScrapeJobHandlerUnit:

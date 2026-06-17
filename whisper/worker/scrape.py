@@ -142,6 +142,6 @@ def main() -> None:
         scheduler_url=scheduler_url,
     )
 
+
 if __name__ == "__main__":
     main()
-

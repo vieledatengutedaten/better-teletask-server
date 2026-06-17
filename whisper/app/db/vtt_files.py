@@ -214,17 +214,20 @@ def get_missing_translations():
         ).all()
         return [(row[0], row[1]) for row in rows]
 
-@db_operation(success_message="Successfully queried languages of translation for lecture ID.")
+
+@db_operation(
+    success_message="Successfully queried languages of translation for lecture ID."
+)
 def get_languages_of_translation(teletaskid: int) -> list[str]:
     with get_session() as session:
         rows = session.execute(
-            select(VttFileRecord.language)
-            .where(
+            select(VttFileRecord.language).where(
                 VttFileRecord.lecture_id == teletaskid,
                 VttFileRecord.is_original_lang.is_(False),
             )
         ).all()
         return [row[0] for row in rows]
+
 
 @db_operation(
     success_message="Successfully queried VTT file by ID {lecture_id} and language {language}."

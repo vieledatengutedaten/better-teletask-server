@@ -29,8 +29,8 @@ def _require_worker_owns_job(scheduler: Scheduler, worker_id: str, job_id: str) 
     if owner != worker_id:
         logger.warning(
             f"Worker {worker_id} attempted to update job {job_id} owned by {owner}",
-            extra={"id": "SCHEDULER"}
-            )
+            extra={"id": "SCHEDULER"},
+        )
         raise HTTPException(
             status_code=409,
             detail=f"Job {job_id} belongs to worker {owner}, not {worker_id}",
@@ -77,7 +77,9 @@ async def _report_failure_common(
 def _require_job(scheduler: Scheduler, job_id: str) -> Job:
     job = scheduler.get_job(job_id)
     if job is None:
-        logger.warning(f"Job {job_id} not found in scheduler", extra={"id": "SCHEDULER"})
+        logger.warning(
+            f"Job {job_id} not found in scheduler", extra={"id": "SCHEDULER"}
+        )
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
     return job
 
@@ -151,7 +153,6 @@ async def report_failure_v2(
 ):
     job = _require_worker_owns_job(scheduler, worker_id, job_id)
 
-
     return await _report_failure_common(
         scheduler=scheduler,
         job=job,
@@ -162,7 +163,6 @@ async def report_failure_v2(
 
 @worker_router.post("/{worker_id}/finished")
 async def report_worker_finished(worker_id: str, scheduler: SchedulerDep):
-
 
     jobs = scheduler.worker_finished(worker_id)
     if jobs is None:

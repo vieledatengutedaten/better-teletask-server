@@ -71,9 +71,7 @@ class TestEmptyToken:
 
 class TestInvalidToken:
     def test_wrong_token_returns_401(self, client):
-        response = client.get(
-            "/worker/ping", headers={"Authorization": "Bearer wrong"}
-        )
+        response = client.get("/worker/ping", headers={"Authorization": "Bearer wrong"})
         assert response.status_code == 401
         assert response.json()["detail"] == "Invalid worker token"
 
@@ -85,15 +83,6 @@ class TestValidToken:
         )
         assert response.status_code == 200
         assert response.json() == "pong"
-
-
-class TestDevBypass:
-    def test_dev_environment_skips_auth(self):
-        with patch.object(workerauth, "ENVIRONMENT", "dev"), patch.object(
-            workerauth, "VM_WORKER_AUTH_TOKEN", TOKEN
-        ):
-            response = TestClient(create_app()).get("/worker/ping")
-            assert response.status_code == 200
 
 
 class TestTokenNotConfigured:

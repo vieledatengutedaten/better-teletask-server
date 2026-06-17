@@ -249,7 +249,9 @@ class Scheduler:
         """Run the scheduler loop and dispatch workers as needed."""
         limits = ", ".join(f"{r}={spec.max_workers}" for r, spec in RESOURCES.items())
         logger.info(f"Scheduler started; resource limits: {limits}")
-        await asyncio.sleep(STARTUP_DELAY_SECONDS)  # let server startup logs finish first
+        await asyncio.sleep(
+            STARTUP_DELAY_SECONDS
+        )  # let server startup logs finish first
         while True:
             dispatched = await self._dispatch_available()
             if dispatched > 0:

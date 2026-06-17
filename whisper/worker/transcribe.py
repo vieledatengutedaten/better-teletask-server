@@ -16,6 +16,7 @@ from .utils import fetch_worker_batch, report_worker_finished
 from lib.core.config import INPUT_PATH
 from lib.services.downloader import downloadMP4, convert_to_mp3
 
+
 def _run_single_job(
     job: JobPayload[TranscriptionParams],
     worker_id: str,
@@ -49,25 +50,31 @@ def _run_single_job(
                 return -1
         transcribeVideoByID(job.params.teletask_id, model)
     except Exception as exc:
-        logger.error(f"Failed to transcribe lecture {job.params.lecture_id}: {exc}", extra={"id": job.params.lecture_id})
+        logger.error(
+            f"Failed to transcribe lecture {job.params.lecture_id}: {exc}",
+            extra={"id": job.params.lecture_id},
+        )
     return True
 
 
 def run_transcription(
     jobs: Sequence[JobPayload[TranscriptionParams]],
     worker_id: str,
-    scheduler_url: str | None
+    scheduler_url: str | None,
 ) -> bool:
     success = True
     # TODO we just assume same parameters for batch, might want to validate this and/or support multiple models in one batch
     # TODO cpu for testing
-    model = prepare_model(jobs[0].params.asr_model, "cpu", compute_type=jobs[0].params.compute_type)
+    model = prepare_model(
+        jobs[0].params.asr_model, "cpu", compute_type=jobs[0].params.compute_type
+    )
     for job in jobs:
         if not _run_single_job(job, worker_id, scheduler_url, model):
             success = False
 
     finished_ok = report_worker_finished(worker_id, scheduler_url)
     return success
+
 
 TRANSCRIBE_BATCH_ADAPTER = TypeAdapter(BatchPayload[TranscriptionParams])
 
@@ -112,7 +119,9 @@ def main() -> None:
     worker_id_arg = cast(str | None, parsed.worker_id)
     jobs_file = cast("TextIO | None", parsed.jobs_file)
 
-    print(f"Parsed args: worker_id={worker_id_arg}, scheduler_url={scheduler_url}, jobs_file={jobs_file}")
+    print(
+        f"Parsed args: worker_id={worker_id_arg}, scheduler_url={scheduler_url}, jobs_file={jobs_file}"
+    )
     try:
         if jobs_file is not None:
             worker_id, jobs = _load_jobs(jobs_file)
@@ -136,8 +145,6 @@ def main() -> None:
         worker_id=worker_id,
         scheduler_url=scheduler_url,
     )
-    
-
 
 
 if __name__ == "__main__":

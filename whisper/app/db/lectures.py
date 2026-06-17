@@ -186,6 +186,7 @@ def get_language_of_lecture(teletaskid) -> str:
         logger.info(f"No lecture data found for Teletask ID: {teletaskid}")
         return None
 
+
 @db_operation(success_message="Successfully queried MP4 URL of lecture.")
 def get_mp4url_of_lecture(teletaskid) -> str:
     with get_session() as session:

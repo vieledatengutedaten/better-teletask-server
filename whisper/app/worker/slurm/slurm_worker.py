@@ -30,9 +30,7 @@ def build_json(
     return DumpJobPayload(
         worker_id=worker_id,
         job_type=job_type,
-        jobs=[
-            {"job_id": p.job_id, "params": p.params.model_dump()} for p in payloads
-        ],
+        jobs=[{"job_id": p.job_id, "params": p.params.model_dump()} for p in payloads],
     ).model_dump_json()
 
 
@@ -62,7 +60,7 @@ class SlurmWorker(Worker):
                     job_type,
                 )
                 print(build_json(worker_id, job_type, payloads))
-                #raise NotImplementedError("SlurmWorker does not implement 'transcription' execution yet")
+                # raise NotImplementedError("SlurmWorker does not implement 'transcription' execution yet")
             case "translation":
                 _ = require_params(
                     [payload.params for payload in payloads],

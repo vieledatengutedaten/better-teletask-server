@@ -45,7 +45,9 @@ class LocalWorker(Worker):
                 )
                 scrape_payloads = [
                     JobPayload(job_id=payload.job_id, params=params)
-                    for payload, params in zip(payloads, transcription_params, strict=True)
+                    for payload, params in zip(
+                        payloads, transcription_params, strict=True
+                    )
                 ]
 
             case "translation":
