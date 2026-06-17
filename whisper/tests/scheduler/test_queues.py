@@ -14,7 +14,7 @@ from lib.models.jobs import (
 
 def make_transcription(teletask_id: int = 1, priority: int = 0) -> TranscriptionJob:
     return TranscriptionJob(
-        params=TranscriptionParams(teletask_id=teletask_id),
+        params=TranscriptionParams(teletask_id=teletask_id, mp4_url="http://example.com/video.mp4"),
         priority=priority,
     )
 

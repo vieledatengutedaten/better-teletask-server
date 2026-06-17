@@ -82,6 +82,21 @@ def _require_job(scheduler: Scheduler, job_id: str) -> Job:
     return job
 
 
+@worker_router.get("/{worker_id}/jobs")
+async def get_worker_jobs(worker_id: str, scheduler: SchedulerDep):
+    """Return the job batch assigned to a worker (BatchPayload form).
+
+    Workers fetch their batch here instead of receiving it on the command line.
+    The batch stays available from dispatch until the worker reports /finished.
+    """
+    batch = scheduler.worker_batch_payload(worker_id)
+    if batch is None:
+        raise HTTPException(
+            status_code=404, detail=f"No active job batch for worker {worker_id}"
+        )
+    return batch
+
+
 @worker_router.post("/{worker_id}/jobs/{job_id}/status")
 async def update_status_v2(
     worker_id: str,

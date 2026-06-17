@@ -41,8 +41,8 @@ class TestGetQueues:
     def test_returns_queued_and_active_jobs(
         self, mock_get_scheduler, mock_queue_manager, client
     ):
-        whisper_job = TranscriptionJob(params=TranscriptionParams(teletask_id=100))
-        active_job = TranscriptionJob(params=TranscriptionParams(teletask_id=200))
+        whisper_job = TranscriptionJob(params=TranscriptionParams(teletask_id=100, mp4_url="http://example.com/video.mp4"))
+        active_job = TranscriptionJob(params=TranscriptionParams(teletask_id=200, mp4_url="http://example.com/video.mp4"))
 
         mock_queue_manager.get_all = AsyncMock(side_effect=[[], [whisper_job], []])
         mock_get_scheduler.return_value = SimpleNamespace(active_jobs=[active_job])

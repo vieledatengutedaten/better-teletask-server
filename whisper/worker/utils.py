@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 import logging
 import os
-from typing import override
+from typing import cast, override
 
 import requests
 
@@ -103,6 +103,17 @@ def resolve_scheduler_url(scheduler_url: str | None) -> str:
 	if env_url:
 		return env_url.rstrip("/")
 	return "http://127.0.0.1:8000"
+
+
+def fetch_worker_batch(
+	worker_id: str, scheduler_url: str | None = None
+) -> dict[str, object]:
+	"""Pull this worker's job batch from the scheduler (BatchPayload form)."""
+	base_url = resolve_scheduler_url(scheduler_url)
+	url = f"{base_url}/worker/{worker_id}/jobs"
+	response = requests.get(url, timeout=10)
+	response.raise_for_status()
+	return cast(dict[str, object], response.json())
 
 
 def post_json(url: str, payload: dict[str, object]) -> bool:

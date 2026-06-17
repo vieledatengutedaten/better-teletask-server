@@ -5,6 +5,7 @@ import json
 from collections.abc import Sequence
 from typing import TextIO, cast
 
+import requests
 from pydantic import TypeAdapter, ValidationError
 
 from lib.core.logger import logger
@@ -15,6 +16,7 @@ from lib.models.jobs.scrape import (
 )
 from lib.services.scraper import scrape_lecture_data
 from worker.utils import (
+    fetch_worker_batch,
     log_to_scheduler,
     report_job_failed,
     report_job_result,
@@ -78,46 +80,61 @@ def run_scrape(
     return success and finished_ok
 
 
-def _load_jobs(
-    jobs_file: TextIO,
-) -> tuple[str | None, list[JobPayload[ScrapeLectureDataParams]]]:
-    payload = cast(object, json.load(jobs_file))
+def _validate_batch(
+    payload: object,
+) -> tuple[str, list[JobPayload[ScrapeLectureDataParams]]]:
     try:
         batch = SCRAPE_BATCH_ADAPTER.validate_python(payload)
         return batch.worker_id, batch.jobs
-
     except ValidationError as exc:
         raise ValueError(f"Invalid scrape jobs payload: {exc}") from exc
+
+
+def _load_jobs(
+    jobs_file: TextIO,
+) -> tuple[str, list[JobPayload[ScrapeLectureDataParams]]]:
+    return _validate_batch(cast(object, json.load(jobs_file)))
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Scrape job batch CLI")
     _ = parser.add_argument(
-        "--jobs-file",
-        type=argparse.FileType("r", encoding="utf-8"),
-        required=True,
+        "--worker-id",
+        type=str,
+        default=None,
+        help="Worker id; the batch is fetched from the scheduler over HTTP.",
     )
     _ = parser.add_argument("--scheduler-url", type=str, default=None)
+    _ = parser.add_argument(
+        "--jobs-file",
+        type=argparse.FileType("r", encoding="utf-8"),
+        default=None,
+        help="Local batch JSON (debugging); used instead of fetching when given.",
+    )
     return parser
 
 
 def main() -> None:
     parsed = build_parser().parse_args()
     scheduler_url = cast(str | None, parsed.scheduler_url)
-    jobs_file = cast(TextIO, parsed.jobs_file)
-
+    worker_id_arg = cast(str | None, parsed.worker_id)
+    jobs_file = cast("TextIO | None", parsed.jobs_file)
 
     try:
-        worker_id, jobs = _load_jobs(jobs_file)
-        print(jobs)
+        if jobs_file is not None:
+            worker_id, jobs = _load_jobs(jobs_file)
+        elif worker_id_arg:
+            raw = fetch_worker_batch(worker_id_arg, scheduler_url)
+            worker_id, jobs = _validate_batch(raw)
+        else:
+            logger.error("Provide --worker-id (to fetch from scheduler) or --jobs-file")
+            raise SystemExit(2)
     except ValueError as exc:
         logger.error(str(exc))
         raise SystemExit(2) from exc
-
-    if not worker_id:
-        logger.error("Missing worker_id in jobs payload or --worker-id")
-        raise SystemExit(2)
-
+    except requests.RequestException as exc:
+        logger.error(f"Failed to fetch batch for worker {worker_id_arg}: {exc}")
+        raise SystemExit(2) from exc
 
     run_scrape(
         jobs=jobs,

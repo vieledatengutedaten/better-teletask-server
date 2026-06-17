@@ -62,7 +62,7 @@ class SlurmWorker(Worker):
                     job_type,
                 )
                 print(build_json(worker_id, job_type, payloads))
-                raise NotImplementedError("SlurmWorker does not implement 'transcription' execution yet")
+                #raise NotImplementedError("SlurmWorker does not implement 'transcription' execution yet")
             case "translation":
                 _ = require_params(
                     [payload.params for payload in payloads],

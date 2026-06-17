@@ -8,7 +8,6 @@ dependencies = [
     "beautifulsoup4>=4.14.3",
     "black>=26.3.1",
     "fastapi>=0.135.2",
-    "ffmpeg-python>=0.2.0",
     "httpx>=0.28.1",
     "psycopg2-binary>=2.9.11",
     "pydantic>=2.12.5",
@@ -22,6 +21,7 @@ dependencies = [
     "websockets==16.0",
     "torchcodec>=0.7,<0.8",
     "poethepoet>=0.46.0",
+    "ffmpeg-python>=0.2.0",
 ]
 
 [tool.poe.tasks]

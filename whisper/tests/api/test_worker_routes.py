@@ -46,7 +46,7 @@ class FakeScheduler:
 
 @pytest.fixture
 def job() -> TranscriptionJob:
-    return TranscriptionJob(params=TranscriptionParams(teletask_id=12345))
+    return TranscriptionJob(params=TranscriptionParams(teletask_id=12345, mp4_url="http://example.com/video.mp4"))
 
 
 @pytest.fixture

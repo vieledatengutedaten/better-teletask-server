@@ -41,6 +41,8 @@ HTTPS_REDIRECT = os.environ.get("HTTPS_REDIRECT", "false").lower() == "true"
 
 # --- URLs ---
 BASE_URL = "https://www.tele-task.de/lecture/video/"
+# URL SLURM compute nodes use to reach this scheduler (job pull + callbacks).
+SCHEDULER_URL = os.environ.get("SCHEDULER_URL", "http://127.0.0.1:8000")
 
 # --- Translation / Ollama ---
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")

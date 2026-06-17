@@ -78,6 +78,33 @@ class Scheduler:
                     return worker_id
         return None
 
+    def get_jobs_for_worker(self, worker_id: str) -> list[Job] | None:
+        """Return the active job batch assigned to a worker, if any."""
+        for workers in self._active.values():
+            if worker_id in workers:
+                return workers[worker_id]
+        return None
+
+    def worker_batch_payload(self, worker_id: str) -> dict[str, object] | None:
+        """Serialize a worker's active batch in BatchPayload form.
+
+        Same shape as the JSON built for dispatch (worker_id, job_type, jobs:
+        [{job_id, params}]); params are dumped off the concrete instance so
+        subclass fields are preserved. Workers pull this via HTTP GET instead of
+        receiving it on the command line.
+        """
+        jobs = self.get_jobs_for_worker(worker_id)
+        if not jobs:
+            return None
+        return {
+            "worker_id": worker_id,
+            "job_type": jobs[0].job_type,  # a batch is always a single job_type
+            "jobs": [
+                {"job_id": j.id, "params": j.params.model_dump(mode="json")}
+                for j in jobs
+            ],
+        }
+
     def active_teletask_ids(self, job_type: JobType) -> set[int]:
         """Collect active teletask IDs for a specific job type."""
         resource = spec_for(job_type).resource

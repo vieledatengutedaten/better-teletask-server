@@ -6,6 +6,7 @@ from ...core.config import ASR_MODEL, COMPUTE_TYPE
 
 class TranscriptionParams(JobParamsBase):
     teletask_id: int
+    mp4_url: str
     initial_prompt: str | None = None
     asr_model: str | None = ASR_MODEL
     compute_type: str | None = COMPUTE_TYPE

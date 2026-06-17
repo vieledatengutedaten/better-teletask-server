@@ -185,3 +185,17 @@ def get_language_of_lecture(teletaskid) -> str:
             return language
         logger.info(f"No lecture data found for Teletask ID: {teletaskid}")
         return None
+
+@db_operation(success_message="Successfully queried MP4 URL of lecture.")
+def get_mp4url_of_lecture(teletaskid) -> str:
+    with get_session() as session:
+        mp4_url = session.execute(
+            select(LectureDataRecord.video_mp4).where(
+                LectureDataRecord.lecture_id == teletaskid
+            )
+        ).scalar_one_or_none()
+
+        if mp4_url:
+            return mp4_url
+        logger.info(f"No lecture data found for Teletask ID: {teletaskid}")
+        return None
