@@ -11,12 +11,20 @@ from typing import cast, override
 
 import requests
 
+from lib.core.config import VM_WORKER_AUTH_TOKEN
 from lib.core.logger import formatter, logger
 from lib.models.jobs import LogLevel
 from lib.models.messages import LogMessage
 
 
 _worker_log_enabled: ContextVar[bool] = ContextVar("worker_log_enabled", default=False)
+
+
+def worker_auth_headers() -> dict[str, str]:
+	"""Bearer header carrying the shared worker token, empty when unset."""
+	if VM_WORKER_AUTH_TOKEN:
+		return {"Authorization": f"Bearer {VM_WORKER_AUTH_TOKEN}"}
+	return {}
 
 
 class SchedulerPostHandler(logging.Handler):
@@ -42,6 +50,7 @@ class SchedulerPostHandler(logging.Handler):
 			_ = requests.post(
 				self.url,
 				json=payload,
+				headers=worker_auth_headers(),
 				timeout=5,
 			)
 		except Exception:
@@ -111,14 +120,14 @@ def fetch_worker_batch(
 	"""Pull this worker's job batch from the scheduler (BatchPayload form)."""
 	base_url = resolve_scheduler_url(scheduler_url)
 	url = f"{base_url}/worker/{worker_id}/jobs"
-	response = requests.get(url, timeout=10)
+	response = requests.get(url, headers=worker_auth_headers(), timeout=10)
 	response.raise_for_status()
 	return cast(dict[str, object], response.json())
 
 
 def post_json(url: str, payload: dict[str, object]) -> bool:
 	try:
-		response = requests.post(url, json=payload, timeout=10)
+		response = requests.post(url, json=payload, headers=worker_auth_headers(), timeout=10)
 		response.raise_for_status()
 		return True
 	except requests.RequestException as exc:

@@ -3,7 +3,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
 
 from lib.core.config import CORS_ORIGINS, HTTPS_REDIRECT
-from app.middleware.auth import AuthMiddleware
+from app.middleware.userauth import AuthMiddleware
 from app.middleware.logging import RequestLoggingMiddleware
 
 

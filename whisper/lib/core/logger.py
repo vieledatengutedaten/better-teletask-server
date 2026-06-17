@@ -39,6 +39,8 @@ class SchedulerLogHandler(logging.Handler):
     ):
         super().__init__(level)
         self.url = f"{scheduler_url}/worker/{worker_id}/jobs/{job_id}/log"
+        token = os.environ.get("VM_WORKER_AUTH_TOKEN")
+        self.headers = {"Authorization": f"Bearer {token}"} if token else {}
 
     def emit(self, record):
         try:
@@ -48,6 +50,7 @@ class SchedulerLogHandler(logging.Handler):
                     "message": self.format(record),
                     "level": record.levelname.lower(),
                 },
+                headers=self.headers,
                 timeout=5,
             )
         except Exception:

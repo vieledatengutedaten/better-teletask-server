@@ -31,6 +31,7 @@ OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
 
 # --- Auth ---
 USERNAME_COOKIE = os.environ.get("USERNAME_COOKIE")
+VM_WORKER_AUTH_TOKEN = os.environ.get("VM_WORKER_AUTH_TOKEN")
 
 # --- Middleware ---
 CORS_ORIGINS = [

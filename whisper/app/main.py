@@ -1,7 +1,7 @@
 import uvicorn
 import asyncio
 import contextlib
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 
 # setup logging — must be imported before other modules to configure handlers
 from lib.core.logger import logger
@@ -13,6 +13,7 @@ from app.scheduler.scheduler import Scheduler, set_scheduler
 from lib.core.config import ENVIRONMENT
 from app.api.scheduling_routes import schedule_router
 from app.api.worker_routes import worker_router
+from app.middleware.workerauth import verify_worker_token
 
 
 @contextlib.asynccontextmanager
@@ -51,8 +52,11 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
 app.include_router(schedule_router, prefix="/schedule")
-app.include_router(worker_router, prefix="/worker")
+app.include_router(
+    worker_router, prefix="/worker", dependencies=[Depends(verify_worker_token)]
+)
 
 if ENVIRONMENT == "dev":
     from app.api.admin_routes import admin_router
