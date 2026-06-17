@@ -8,14 +8,15 @@ import whisperx
 from whisperx.utils import get_writer
 
 from lib.core.config import ASR_MODEL, COMPUTE_TYPE, INPUT_PATH, OUTPUT_PATH, DEVICE
-from app.db.lectures import get_language_of_lecture
 
 
 def prepare_model(asr_model: str, device: str, compute_type: str):
     return whisperx.load_model(asr_model, device=device, compute_type=compute_type)
 
 
-def transcribeVideoByID(id: int, model: Any | None) -> str:
+def transcribeVideoByID(
+    id: int, model: Any | None, language: str | None = None
+) -> str:
 
     if model is None:
         model = whisperx.load_model(ASR_MODEL, device=DEVICE, compute_type=COMPUTE_TYPE)
@@ -27,19 +28,15 @@ def transcribeVideoByID(id: int, model: Any | None) -> str:
         logger.error(f"input audio file not found: {file_path}", extra={"id": id})
         raise FileNotFoundError(f"input audio file not found: {file_path}")
 
-    language = None
-    try:
-        language = get_language_of_lecture(id)
-        logger.info(f"Fetched language from database: {language}", extra={"id": id})
-    except Exception as e:
-        logger.warning(f"Could not fetch language from database. {e}", extra={"id": id})
-
     if language is None:
         logger.info(
-            f"No language found in database, defaulting to auto detection from whisperx.",
+            "No language in job parameters, defaulting to auto detection from whisperx.",
             extra={"id": id},
         )
-        language = None
+    else:
+        logger.info(
+            f"Using language from job parameters: {language}", extra={"id": id}
+        )
 
     audio = whisperx.load_audio(file_path)
 

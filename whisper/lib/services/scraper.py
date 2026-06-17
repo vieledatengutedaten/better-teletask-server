@@ -6,8 +6,6 @@ import json
 import os
 from pathlib import Path
 
-from sqlalchemy.sql import elements
-
 from lib.core.config import USERNAME_COOKIE, BASE_URL
 from lib.core.logger import logger
 from lib.models.jobs import LectureScrapeData

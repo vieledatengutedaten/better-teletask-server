@@ -48,7 +48,7 @@ def _run_single_job(
                     extra={"id": id},
                 )
                 return -1
-        transcribeVideoByID(job.params.teletask_id, model)
+        transcribeVideoByID(job.params.teletask_id, model, job.params.language)
     except Exception as exc:
         logger.error(
             f"Failed to transcribe lecture {job.params.lecture_id}: {exc}",
