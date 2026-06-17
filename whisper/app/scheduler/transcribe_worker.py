@@ -63,24 +63,3 @@ async def remove_id_from_in_process(id: int):
     logger.debug(f"Removing ID {id} from in-process queue.")
     await in_process_queue.remove(id)
 
-
-async def transcribe_worker():
-    """Worker that continuously processes IDs from the queues."""
-    sleep_time = 40
-    await asyncio.sleep(10)  # Initial delay before starting
-    logger.info("Transcribe worker started.")
-    while True:
-        id = await get_id_for_worker()
-        logger.info(f"Got ID for worker: {id}")
-        if id is not None:
-            logger.info(f"Transcribing ID: {id}")
-            try:
-                logger.debug(f"Starting transcription for ID {id} in separate thread.")
-                await asyncio.to_thread(transcribePipelineVideoByID, id)
-            except Exception as e:
-                logger.error(f"Transcription failed for ID {id}: {e}")
-        else:
-            logger.info(
-                f"No IDs available to transcribe, waiting {sleep_time} seconds..."
-            )
-            await asyncio.sleep(sleep_time)
