@@ -8,7 +8,7 @@ save_vtt_lines requires DB calls — mock those.
 import pytest
 from unittest.mock import patch, MagicMock
 
-from lib.services.vtt_processing import timestamp_to_ms
+from app.services.vtt_processing import timestamp_to_ms
 
 
 class TestTimestampToMs:
@@ -48,10 +48,10 @@ class TestSaveVttLines:
     We mock all DB calls and provide a valid VTT string.
     """
 
-    @patch("lib.services.vtt_processing.bulk_insert_vtt_lines")
-    @patch("lib.services.vtt_processing.get_lecturer_ids_of_lecture")
-    @patch("lib.services.vtt_processing.get_series_of_vtt_file")
-    @patch("lib.services.vtt_processing.get_vtt_file_by_id")
+    @patch("app.services.vtt_processing.bulk_insert_vtt_lines")
+    @patch("app.services.vtt_processing.get_lecturer_ids_of_lecture")
+    @patch("app.services.vtt_processing.get_series_of_vtt_file")
+    @patch("app.services.vtt_processing.get_vtt_file_by_id")
     def test_parses_vtt_and_inserts_lines(
         self, mock_get_vtt, mock_get_series, mock_get_lecturers, mock_bulk_insert
     ):
@@ -77,7 +77,7 @@ class TestSaveVttLines:
         )
         mock_get_lecturers.return_value = [1, 2]
 
-        from lib.services.vtt_processing import save_vtt_lines
+        from app.services.vtt_processing import save_vtt_lines
 
         save_vtt_lines(1)
 
@@ -92,16 +92,16 @@ class TestSaveVttLines:
         assert lines[1].content == "Second line"
         assert lines[1].line_number == 2
 
-    @patch("lib.services.vtt_processing.bulk_insert_vtt_lines")
-    @patch("lib.services.vtt_processing.get_lecturer_ids_of_lecture")
-    @patch("lib.services.vtt_processing.get_series_of_vtt_file")
-    @patch("lib.services.vtt_processing.get_vtt_file_by_id")
+    @patch("app.services.vtt_processing.bulk_insert_vtt_lines")
+    @patch("app.services.vtt_processing.get_lecturer_ids_of_lecture")
+    @patch("app.services.vtt_processing.get_series_of_vtt_file")
+    @patch("app.services.vtt_processing.get_vtt_file_by_id")
     def test_returns_early_if_vtt_not_found(
         self, mock_get_vtt, mock_get_series, mock_get_lecturers, mock_bulk_insert
     ):
         mock_get_vtt.return_value = None
 
-        from lib.services.vtt_processing import save_vtt_lines
+        from app.services.vtt_processing import save_vtt_lines
 
         save_vtt_lines(999)
 

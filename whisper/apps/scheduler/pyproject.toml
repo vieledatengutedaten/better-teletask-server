@@ -1,0 +1,34 @@
+[project]
+name = "btt-scheduler"
+version = "0.1.0"
+description = "Scheduling VM: FastAPI app that dispatches jobs to local/SLURM workers."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "btt-core",
+    "fastapi>=0.135.2",
+    "uvicorn>=0.42.0",
+    "starlette>=0.40",
+    "sqlalchemy>=2.0.48",
+    "psycopg2-binary>=2.9.11",
+    "httpx>=0.28.1",
+    "websockets==16.0",
+    "pydantic>=2.12.5",
+]
+
+[project.optional-dependencies]
+# Fat dev / single-node image: run scrape & transcribe jobs in-process
+# (app.worker.local). Omit this extra for a slim SLURM-dispatch-only VM.
+local = ["btt-worker-scrape", "btt-worker-transcribe"]
+
+[tool.uv.sources]
+btt-core = { workspace = true }
+btt-worker-scrape = { workspace = true }
+btt-worker-transcribe = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.9,<0.12"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "app"
+module-root = "src"

@@ -10,11 +10,11 @@ from pydantic import TypeAdapter
 from lib.core.logger import logger
 from lib.models.jobs.transcription import TranscriptionParams
 from lib.models.jobs.base import BatchPayload, JobPayload
-from lib.services.whisper_asr import prepare_model, transcribeVideoByID
-from .utils import fetch_worker_batch, report_worker_finished
+from transcribe_worker.whisper_asr import prepare_model, transcribeVideoByID
+from lib.worker_client import fetch_worker_batch, report_worker_finished
 
 from lib.core.config import INPUT_PATH
-from lib.services.downloader import downloadMP4, convert_to_mp3
+from transcribe_worker.downloader import downloadMP4, convert_to_mp3
 
 
 def _run_single_job(

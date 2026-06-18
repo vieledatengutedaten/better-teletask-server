@@ -1,0 +1,35 @@
+[project]
+name = "btt-worker-transcribe"
+version = "0.1.0"
+description = "Transcription job worker. Run with: python -m transcribe_worker"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "btt-core",
+    "requests>=2.32",
+    "pydantic>=2.12.5",
+    "whisperx>=3.8.4",
+    "torchcodec>=0.7,<0.8",
+    "ffmpeg-python>=0.2.0",
+    "tqdm>=4.66",
+]
+
+[tool.uv.sources]
+btt-core = { workspace = true }
+# whisperx pins torch/torchaudio (currently 2.8.x); their PyPI wheels already
+# bundle CUDA 12.8. To force a different CUDA build, point torch/torchaudio at the
+# matching index below (it must carry the torch version whisperx requires):
+# torch = { index = "pytorch-cuda" }
+# torchaudio = { index = "pytorch-cuda" }
+
+# [[tool.uv.index]]
+# name = "pytorch-cuda"
+# url = "https://download.pytorch.org/whl/cu128"
+# explicit = true
+
+[build-system]
+requires = ["uv_build>=0.9,<0.12"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "transcribe_worker"
+module-root = "src"

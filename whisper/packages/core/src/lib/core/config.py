@@ -21,7 +21,9 @@ COMPUTE_TYPE = os.environ.get("COMPUTE_TYPE", "int8")
 DEVICE = os.environ.get("DEVICE", "cuda")
 
 # --- Paths ---
-SCRIPT_DIR = Path(__file__).resolve().parent.parent.parent
+# Data dirs are resolved relative to the runtime working directory (or DATA_DIR),
+# not the source tree, so they keep working once the package is installed in a venv.
+SCRIPT_DIR = Path(os.environ.get("DATA_DIR", ".")).resolve()
 VTT_DEST_FOLDER = os.environ.get("VTT_DEST_FOLDER", "output/")
 RECORDING_SOURCE_FOLDER = os.environ.get("RECORDING_SOURCE_FOLDER", "input/")
 INPUT_PATH = SCRIPT_DIR / RECORDING_SOURCE_FOLDER

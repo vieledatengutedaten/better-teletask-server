@@ -8,7 +8,7 @@ Run explicitly with:  pytest -m integration
 import pytest
 from unittest.mock import patch
 
-from lib.services.translation import (
+from app.services.translation import (
     parse_vtt_blocks,
     process_block_timestamps,
     group_blocks_into_chunks,
@@ -146,11 +146,11 @@ class TestOllamaTranslation:
 
         with (
             patch(
-                "lib.services.translation.get_original_vtt",
+                "app.services.translation.get_original_vtt",
                 side_effect=mock_get_original_vtt,
             ),
             patch(
-                "lib.services.translation.save_vtt_file",
+                "app.services.translation.save_vtt_file",
                 side_effect=mock_save_vtt_file,
             ),
         ):

@@ -1,27 +1,16 @@
-[project]
-name = "btt-backend"
-version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
-requires-python = ">=3.13"
-dependencies = [
-    "beautifulsoup4>=4.14.3",
-    "black>=26.3.1",
-    "fastapi>=0.135.2",
-    "httpx>=0.28.1",
-    "psycopg2-binary>=2.9.11",
-    "pydantic>=2.12.5",
+[tool.uv.workspace]
+members = ["packages/*", "apps/*", "workers/*"]
+
+# Virtual workspace root: no [project] of its own, it only ties the members
+# together under a single lockfile (uv.lock). Each member declares its own
+# dependencies and is built/installed independently (see their pyproject.toml).
+
+[dependency-groups]
+dev = [
     "pytest>=9.0.2",
     "pytest-asyncio>=1.3.0",
-    "python-dotenv>=1.2.2",
-    "sqlalchemy>=2.0.48",
-    "uvicorn>=0.42.0",
-    "webvtt-py==0.5.1",
-    "whisperx>=3.8.4",
-    "websockets==16.0",
-    "torchcodec>=0.7,<0.8",
+    "black>=26.3.1",
     "poethepoet>=0.46.0",
-    "ffmpeg-python>=0.2.0",
 ]
 
 [tool.poe.tasks]
@@ -29,4 +18,3 @@ vm    = "uvicorn app.main:app"
 vmr   = "uvicorn app.main:app --reload"
 user  = "uvicorn app.userapp:app"
 userr = "uvicorn app.userapp:app --reload"
-

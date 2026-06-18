@@ -15,7 +15,7 @@ from lib.models.jobs.scrape import (
     ScrapeLectureDataResult,
 )
 from lib.services.scraper import scrape_lecture_data
-from worker.utils import (
+from lib.worker_client import (
     fetch_worker_batch,
     log_to_scheduler,
     report_job_failed,

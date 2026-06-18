@@ -1,0 +1,21 @@
+[project]
+name = "btt-core"
+version = "0.1.0"
+description = "Shared kernel: domain models, config, logging, scraping and worker-client helpers."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "pydantic>=2.12.5",
+    "python-dotenv>=1.2.2",
+    "webvtt-py==0.5.1",
+    "requests>=2.32",
+    "beautifulsoup4>=4.14.3",
+]
+
+[build-system]
+requires = ["uv_build>=0.9,<0.12"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+# Distribution name is `btt-core` but the import package is `lib`.
+module-name = "lib"
+module-root = "src"

@@ -1,0 +1,31 @@
+# venvs / build artifacts
+.venv
+**/.venv
+dist
+**/*.egg-info
+
+# caches
+**/__pycache__
+**/*.pyc
+.pytest_cache
+**/.pytest_cache
+.ruff_cache
+
+# runtime data & logs (mounted at runtime, never baked into images)
+input
+output
+logs
+**/logs
+models
+
+# tests (not needed in runtime images)
+tests
+
+# vcs / editors / local env
+.git
+.gitignore
+.idea
+.vscode
+**/.vscode
+.env
+.env.*

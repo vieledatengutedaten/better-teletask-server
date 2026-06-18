@@ -1,11 +1,18 @@
 services:
-  transcriber:
-    build: ./whisper
+  # The scheduling VM. Built "fat" (INSTALL_LOCAL=true) so it can run scrape &
+  # transcription jobs in-process on this GPU node. For a SLURM-only deployment
+  # drop the build arg (slim, no torch) and run the worker images on the cluster.
+  scheduler:
+    build:
+      context: ./whisper
+      dockerfile: apps/scheduler/Dockerfile
+      args:
+        INSTALL_LOCAL: "true"
     environment:
       - TZ=${TZ}
     volumes:
-      - ./.env:/whisper/.env:ro
-      - ./whisper/logs:/whisper/logs
+      - ./.env:/app/.env:ro
+      - ./whisper/logs:/app/logs
       - "models:/models"
     depends_on:
       database:
@@ -14,6 +21,30 @@ services:
     gpus: all
     stop_signal: SIGINT
     stop_grace_period: 30s
+
+  # Standalone worker images (SLURM / `docker run` use). Not started by default;
+  # build them with:  docker compose --profile workers build
+  worker-scrape:
+    build:
+      context: ./whisper
+      dockerfile: workers/scrape/Dockerfile
+    profiles: ["workers"]
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ./.env:/app/.env:ro
+
+  worker-transcribe:
+    build:
+      context: ./whisper
+      dockerfile: workers/transcribe/Dockerfile
+    profiles: ["workers"]
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ./.env:/app/.env:ro
+      - "models:/models"
+    gpus: all
 
   api:
     build: ./api
@@ -35,6 +66,8 @@ services:
       - TZ=${TZ}
       - PGTZ=${TZ}
     env_file: ".env"
+    ports:
+    - "5432:5432"
     volumes:
       - "pgdata:/var/lib/postgresql"
     healthcheck:

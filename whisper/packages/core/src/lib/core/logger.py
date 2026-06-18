@@ -87,9 +87,10 @@ if ENVIRONMENT == "worker":
     root_logger.addHandler(stream_handler)
 
 else:
-    # Server mode: file + stream logging as before
-    BASE_DIR = Path(__file__).parent.parent.parent
-    LOG_FILE_PATH = BASE_DIR / "logs"
+    # Server mode: file + stream logging as before.
+    # Logs go to $LOG_DIR (default ./logs under the working dir), not a path
+    # relative to __file__, so this keeps working once installed in a venv.
+    LOG_FILE_PATH = Path(os.environ.get("LOG_DIR", "logs"))
     LOG_FILE_PATH.mkdir(parents=True, exist_ok=True)
 
     file_handler = logging.FileHandler(
